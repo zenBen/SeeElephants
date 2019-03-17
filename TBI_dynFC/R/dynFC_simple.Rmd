@@ -1,0 +1,28 @@
+---
+title: "TBI dynamic FC"
+author: "Ben Cowley"
+date: "17 March 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = '/home/ben/Benslab/project_TBI/SeeElephants')
+library(tidyverse)
+source('read_parse_era.R')
+```
+
+# DATA WRANGLING
+
+
+
+```{r wrangle}
+# List of conditions
+timecond <- c('pre', 'post')
+
+df <- read_all_recordings('TBI_dynFC', pat='ROI_Subject0[0-9][0-9]_Condition000_mock', ext="csv")
+df$cond <- rep(c(rep(1, 145), rep(2, 145)), 24)
+
+subjs <- unique(df$Part)
+sbjix <- seq(1, length(subjs))
+```
