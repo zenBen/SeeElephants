@@ -26,3 +26,31 @@ df$cond <- rep(c(rep(1, 145), rep(2, 145)), 24)
 subjs <- unique(df$Part)
 sbjix <- seq(1, length(subjs))
 ```
+
+
+```{r correlate}
+library(RcppRoll)
+source('dynFC_functions.R')
+
+# pr1.1 <- corr_rollmed_1pr(df, 1, 1, "scr", 20, 10)
+# match.pairs <- corr_rollmed_allpr(df, "scr", 20, 10)
+match.allpr <- corr_rollmed_mat(df, "scr", 20, 10, FALSE)
+corr.allpr <- match.allpr$corr
+# match.count <- match.allpr$count
+
+# Aggregates
+avg.corr <- mean(diag(corr.allpr)) # for constant N, Hunter-Schmidt aggregation is equivalent to average correlation
+ab.av.cor <- mean(abs(diag(corr.allpr))) # for constant N, Hunter-Schmidt aggregation is equivalent to average correlation
+
+# show corr matrix
+library(reshape2)
+ggplot(data = melt(corr.allpr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+```
