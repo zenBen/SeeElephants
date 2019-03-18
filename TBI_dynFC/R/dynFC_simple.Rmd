@@ -10,10 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = '/home/ben/Benslab/project_TBI/SeeElephants')
 library(tidyverse)
 source('read_parse_era.R')
+source('dynFC_functions.R')
 ```
 
 # DATA WRANGLING
-
 
 
 ```{r wrangle}
@@ -25,26 +25,32 @@ df$cond <- rep(c(rep(1, 145), rep(2, 145)), 24)
 
 subjs <- unique(df$Part)
 sbjix <- seq(1, length(subjs))
+
+
+tmp <- filter(df, Part == 1 && cond == 1)
 ```
 
 
+# SYNCHRONY COMBINATIONS
+First, we calculate the correlation matrix for each ROI combination indicated. This is equal to the intra-subject correlations on the diagonal, and inter-subject correlations off-diagonal. 
+
+To aggregate correlations, we take the mean (note that for constant N, Hunter-Schmidt aggregation is equivalent to average correlation). We also take the mean of absolute correlations, to estimate the unsigned magnitude of synchrony. 
+
+We finally plot the correlation matrix for each combination.
+
 ```{r correlate}
 library(RcppRoll)
-source('dynFC_functions.R')
-
-# pr1.1 <- corr_rollmed_1pr(df, 1, 1, "scr", 20, 10)
-# match.pairs <- corr_rollmed_allpr(df, "scr", 20, 10)
-match.allpr <- corr_rollmed_mat(df, "scr", 20, 10, FALSE)
-corr.allpr <- match.allpr$corr
-# match.count <- match.allpr$count
-
-# Aggregates
-avg.corr <- mean(diag(corr.allpr)) # for constant N, Hunter-Schmidt aggregation is equivalent to average correlation
-ab.av.cor <- mean(abs(diag(corr.allpr))) # for constant N, Hunter-Schmidt aggregation is equivalent to average correlation
-
-# show corr matrix
 library(reshape2)
-ggplot(data = melt(corr.allpr), aes(x=Var1, y=Var2, fill=value)) + 
+# s1c1.rifg.lhpc <- corr_rollmed(df, 1, 1, "roi1_rifg", "roi2_lhpc", 10, 5)
+# c1All.rifg.lhpc <- corr_rollmed_all(df, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
+# c2all.rifg.lhpc <- corr_rollmed_all(df, 2, c("roi1_rifg", "roi2_lhpc"), 10, 5)
+
+# ROI 1 R IFG x ROI2 L HPC - COND1
+all2allc1.rifg.lhpc <- corr_rollmed_all2all(df, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5, FALSE)
+allc1.rifg.lhpc <- diag(all2allc1.rifg.lhpc$corr)
+avg.corr.rifg.lhpc <- mean(allc1.rifg.lhpc)
+ab.av.cor.rifg.lhpc <- mean(abs(allc1.rifg.lhpc))
+ggplot(data = melt(all2allc1.rifg.lhpc$corr), aes(x=Var1, y=Var2, fill=value)) + 
   geom_tile(color = "white") +
   scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
                        midpoint = 0, limit = c(-1,1), space = "Lab", 
@@ -53,4 +59,101 @@ ggplot(data = melt(corr.allpr), aes(x=Var1, y=Var2, fill=value)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
   coord_fixed()
 
+# ROI 1 R IFG x ROI2 R NAC - COND1
+all2allc1.rifg.rnac <- corr_rollmed_all2all(df, 1, c("roi1_rifg", "roi2_rnac"), 10, 5, FALSE)
+allc1.rifg.rnac <- diag(all2allc1.rifg.rnac$corr)
+avg.corr.rifg.rnac <- mean(allc1.rifg.rnac)
+ab.av.cor.rifg.rnac <- mean(abs(allc1.rifg.rnac))
+ggplot(data = melt(all2allc1.rifg.rnac$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+# ROI 1 R ACC x ROI2 L STG - COND1
+all2allc1.racc.lstg <- corr_rollmed_all2all(df, 1, c("roi1_racc", "roi2_lstg"), 10, 5, FALSE)
+allc1.racc.lstg <- diag(all2allc1.racc.lstg$corr)
+avg.corr.racc.lstg <- mean(allc1.racc.lstg)
+ab.av.cor.racc.lstg <- mean(abs(allc1.racc.lstg))
+ggplot(data = melt(all2allc1.racc.lstg$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+# ROI 1 R ACC x ROI2 R TPO - COND1
+all2allc1.racc.rtpo <- corr_rollmed_all2all(df, 1, c("roi1_racc", "roi2_rtpo"), 10, 5, FALSE)
+allc1.racc.rtpo <- diag(all2allc1.racc.rtpo$corr)
+avg.corr.racc.rtpo <- mean(allc1.racc.rtpo)
+ab.av.cor.racc.rtpo <- mean(abs(allc1.racc.rtpo))
+ggplot(data = melt(all2allc1.racc.rtpo$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+# ROI 1 R IFG x ROI2 L HPC - Cond2
+all2allc2.rifg.lhpc <- corr_rollmed_all2all(df, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5, FALSE)
+allc2.rifg.lhpc <- diag(all2allc2.rifg.lhpc$corr)
+avg.corr.rifg.lhpc <- mean(allc2.rifg.lhpc)
+ab.av.cor.rifg.lhpc <- mean(abs(allc2.rifg.lhpc))
+ggplot(data = melt(all2allc2.rifg.lhpc$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+# ROI 1 R IFG x ROI2 R NAC - Cond2
+all2allc2.rifg.rnac <- corr_rollmed_all2all(df, 1, c("roi1_rifg", "roi2_rnac"), 10, 5, FALSE)
+allc2.rifg.rnac <- diag(all2allc2.rifg.rnac$corr)
+avg.corr.rifg.rnac <- mean(allc2.rifg.rnac)
+ab.av.cor.rifg.rnac <- mean(abs(allc2.rifg.rnac))
+ggplot(data = melt(all2allc2.rifg.rnac$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+# ROI 1 R ACC x ROI2 L STG - Cond2
+all2allc2.racc.lstg <- corr_rollmed_all2all(df, 1, c("roi1_racc", "roi2_lstg"), 10, 5, FALSE)
+allc2.racc.lstg <- diag(all2allc2.racc.lstg$corr)
+avg.corr.racc.lstg <- mean(allc2.racc.lstg)
+ab.av.cor.racc.lstg <- mean(abs(allc2.racc.lstg))
+ggplot(data = melt(all2allc2.racc.lstg$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
+
+# ROI 1 R ACC x ROI2 R TPO - Cond2
+all2allc2.racc.rtpo <- corr_rollmed_all2all(df, 1, c("roi1_racc", "roi2_rtpo"), 10, 5, FALSE)
+allc2.racc.rtpo <- diag(all2allc2.racc.rtpo$corr)
+avg.corr.racc.rtpo <- mean(allc2.racc.rtpo)
+ab.av.cor.racc.rtpo <- mean(abs(allc2.racc.rtpo))
+ggplot(data = melt(all2allc2.racc.rtpo$corr), aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                       midpoint = 0, limit = c(-1,1), space = "Lab", 
+                       name="Pearson\nCorrelation") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+  coord_fixed()
 ```

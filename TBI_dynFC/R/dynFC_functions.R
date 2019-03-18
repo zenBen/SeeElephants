@@ -1,8 +1,26 @@
-corr_rollmed <- function(df, sbj, cnd, var1, var2, wnd, stp)
+corr_rollmed <- function(df, sbj, cnd, vrs, wnd, stp)
 {
-  require(RcppRoll)
-  dfa <- filter(df, Part == sbj && cond == cnd) %>% select(var1)
-  dfb <- filter(df, Part == sbj && cond == cnd) %>% select(var2)
+  require
+  if (length(sbj) > 1){
+    s1 <- sbj[1]
+    s2 <- sbj[2]
+  }else{
+    s1 <- s2 <- sbj
+  }
+  if (length(cnd) > 1){
+    c1 <- cnd[1]
+    c2 <- cnd[2]
+  }else{
+    c1 <- c2 <- cnd
+  }
+  if (length(vrs) > 1){
+    v1 <- vrs[1]
+    v2 <- vrs[2]
+  }else{
+    v1 <- v2 <- vrs
+  }
+  dfa <- filter(df, Part == s1 & cond == c1) %>% select(v1)
+  dfb <- filter(df, Part == s2 & cond == c2) %>% select(v2)
   dfa.roll <- roll_median(as.numeric(unlist(dfa)), n=wnd, by=stp)
   dfb.roll <- roll_median(as.numeric(unlist(dfb)), n=wnd, by=stp)
   if (length(dfa.roll) != length(dfb.roll)){
@@ -14,13 +32,13 @@ corr_rollmed <- function(df, sbj, cnd, var1, var2, wnd, stp)
 }
 
 
-corr_rollmed_all <- function(df, condi, var1, var2, wnd, stp)
+corr_rollmed_all <- function(df, condi, one_or_two_vars, wnd, stp)
 {
   sbjs <- unique(df$Part)
   match.pairs <- vector("numeric", length(sbjs))
   counts <- vector("numeric", length(sbjs))
   for (i in seq(1, length(sbjs))) {
-    tmp <- corr_rollmed(df, sbjs[i], condi, var1, var2, wnd, stp)
+    tmp <- corr_rollmed(df, sbjs[i], condi, one_or_two_vars, wnd, stp)
     match.pairs[i] <- tmp$corr
     counts[i] <- tmp$count
   }
@@ -41,14 +59,14 @@ upper2lower <- function(m)
 }
 
 
-corr_rollmed_all2all <- function(df, condi, var1, var2, wnd, stp, triangle = TRUE)
+corr_rollmed_all2all <- function(df, condi, one_or_two_vars, wnd, stp, triangle = TRUE)
 {
   sbjs <- unique(df$Part)
   mat.pairs <- matrix(nrow = length(sbjs), ncol = length(sbjs))
   counts <- vector("numeric", length(sbjs))
   for (a in seq(1, length(sbjs))) {
     for (b in seq(a, length(sbjs))) {
-      tmp <- corr_rollmed(df, sbjs[a], condi, var1, var2, wnd, stp)
+      tmp <- corr_rollmed(df, c(sbjs[a], sbjs[b]), condi, one_or_two_vars, wnd, stp)
       mat.pairs[a, b] <- tmp$corr
     }
     counts[a] <- tmp$count
