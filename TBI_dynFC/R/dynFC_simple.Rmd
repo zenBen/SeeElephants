@@ -7,10 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = '/home/bcowley/Benslab/project_TBI/SeeElephants/TBI_dynFC')
+knitr::opts_knit$set(root.dir = '/home/ben/Benslab/project_TBI/SeeElephants/TBI_dynFC')
 library(tidyverse)
 library(RcppRoll)
 library(reshape2)
+library(DAAG)
 source('read_parse_csv.R')
 source('dynFC_functions.R')
 ```
@@ -205,3 +206,33 @@ hist(obsVrand_corr, xlim = range(obsVrand_corr, avg.c2corr.racc.rtpo), col='blac
 abline(v=avg.c2corr.racc.rtpo, col='blue', lwd=2)
 
 ```
+
+
+# TESTING PRE-POST
+
+Are the change of correlations from condition 1 to condition 2 significant?
+Testing by one-sample t-test and one-sample permutation test, we get similar results by each method.
+
+```{r prepost}
+t.test(allc2.racc.lstg - allc1.racc.lstg)
+onet.permutation(allc2.racc.lstg - allc1.racc.lstg)
+
+t.test(allc2.racc.rtpo - allc1.racc.rtpo)
+onet.permutation(allc2.racc.rtpo - allc1.racc.rtpo)
+
+t.test(allc2.rifg.lhpc - allc1.rifg.lhpc)
+onet.permutation(allc2.rifg.lhpc - allc1.rifg.lhpc)
+
+t.test(allc2.rifg.rnac - allc1.rifg.rnac)
+onet.permutation(allc2.rifg.rnac - allc1.rifg.rnac)
+
+```
+
+
+
+
+
+
+
+
+
