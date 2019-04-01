@@ -1,6 +1,6 @@
-corr_rollmed <- function(df, sbj, cnd, vrs, wnd, stp)
+corr_rollme <- function(df, sbj, cnd, vrs, wnd, stp, method = "median")
 {
-  require
+  require(RcppRoll)
   if (length(sbj) > 1){
     s1 <- sbj[1]
     s2 <- sbj[2]
@@ -19,10 +19,14 @@ corr_rollmed <- function(df, sbj, cnd, vrs, wnd, stp)
   }else{
     v1 <- v2 <- vrs
   }
-  dfa <- filter(df, Part == s1 & cond == c1) %>% select(v1)
-  dfb <- filter(df, Part == s2 & cond == c2) %>% select(v2)
-  dfa.roll <- roll_median(as.numeric(unlist(dfa)), n=wnd, by=stp)
-  dfb.roll <- roll_median(as.numeric(unlist(dfb)), n=wnd, by=stp)
+  # select out two matched-length subset vectors
+  dfa <- filter(df, Part == s1 & cond == c1) %>% select(v1) %>% unlist() %>% as.numeric
+  dfb <- filter(df, Part == s2 & cond == c2) %>% select(v2) %>% unlist() %>% as.numeric
+  # apply a requested roll method
+  func <- paste0("roll_", method)
+  dfa.roll <- do.call(func, list(dfa, n=wnd, by=stp))
+  dfb.roll <- do.call(func, list(dfb, n=wnd, by=stp))
+  # Check output has matched length & return
   if (length(dfa.roll) != length(dfb.roll)){
     print('A and B have different quantities of data!')
     return(NA)
@@ -32,13 +36,13 @@ corr_rollmed <- function(df, sbj, cnd, vrs, wnd, stp)
 }
 
 
-corr_rollmed_all <- function(df, condi, one_or_two_vars, wnd, stp)
+corr_rollme_all <- function(df, condi, one_or_two_vars, wnd, stp, method = "median")
 {
   sbjs <- unique(df$Part)
   match.pairs <- vector("numeric", length(sbjs))
   counts <- vector("numeric", length(sbjs))
   for (i in seq(1, length(sbjs))) {
-    tmp <- corr_rollmed(df, sbjs[i], condi, one_or_two_vars, wnd, stp)
+    tmp <- corr_rollme(df, sbjs[i], condi, one_or_two_vars, wnd, stp, method)
     match.pairs[i] <- tmp$corr
     counts[i] <- tmp$count
   }
@@ -59,14 +63,14 @@ upper2lower <- function(m)
 }
 
 
-corr_rollmed_all2all <- function(df, condi, one_or_two_vars, wnd, stp, triangle = TRUE)
+corr_rollme_all2all <- function(df, condi, one_or_two_vars, wnd, stp, method = "median", triangle = TRUE)
 {
   sbjs <- unique(df$Part)
   mat.pairs <- matrix(nrow = length(sbjs), ncol = length(sbjs))
   counts <- vector("numeric", length(sbjs))
   for (a in seq(1, length(sbjs))) {
     for (b in seq(a, length(sbjs))) {
-      tmp <- corr_rollmed(df, c(sbjs[a], sbjs[b]), condi, one_or_two_vars, wnd, stp)
+      tmp <- corr_rollme(df, c(sbjs[a], sbjs[b]), condi, one_or_two_vars, wnd, stp, method)
       mat.pairs[a, b] <- tmp$corr
     }
     counts[a] <- tmp$count
@@ -87,6 +91,10 @@ corr_rollmed_all2all <- function(df, condi, one_or_two_vars, wnd, stp, triangle 
 
 sample_matrix <- function(idx, mtrx, repl = FALSE) 
 {
+  if (all(is.na(mtrx[lower.tri(mtrx)])))
+  {
+    mtrx <- upper2lower(mtrx)
+  }
   sampix <- sample(idx, length(idx), repl)
   sampmat <- mtrx[, sampix]
   return(list("sampmat" = sampmat, "sampdiag" = diag(sampmat)))
@@ -98,4 +106,18 @@ sampmat_diag_stat <- function(FUN, idx, mtrx, repl = FALSE, ...)
   samp <- sample_matrix(idx, mtrx, repl)
   sampstat <- FUN(samp$sampdiag, ...)
   return(sampstat)
+}
+
+
+plot_rwb_cormat <- function(mtrx)
+{
+  ggplot(data = melt(mtrx), aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile(color = "white") +
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+                         midpoint = 0, limit = c(-1,1), space = "Lab", 
+                         name="Pearson\nCorrelation") +
+    theme_minimal() + 
+    theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
+    coord_fixed()
+    # + xlab("") + ylab("")
 }

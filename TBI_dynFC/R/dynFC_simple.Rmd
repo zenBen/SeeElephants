@@ -9,8 +9,26 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = '/home/bcowley/Benslab/project_TBI/SeeElephants/TBI_dynFC')
 library(tidyverse)
+library(RcppRoll)
+library(reshape2)
 source('read_parse_csv.R')
 source('dynFC_functions.R')
+```
+
+# PARAMETERS
+
+```{r params}
+# data-type parameters
+basepath <- 'data'
+EXT <- 'csv'
+# List of conditions
+timecond <- c('pre', 'post')
+# sliding window parameters
+wndw <- 10
+step <- wndw / 2 # 50% overlap steps
+method <- "mean" # options are: max, mean, median, min, prod, sd, sum, var; see ?RcppRoll
+REPS <- 10000
+CND <- 1
 ```
 
 # DATA WRANGLING
@@ -19,9 +37,8 @@ After exporting subject-wise ROIs from Matlab data to csv files, we read all dat
 
 ```{r wrangle}
 # List of conditions
-timecond <- c('pre', 'post')
 
-df <- read_all_recordings('data', pat='ROI_Subject0[0-9][0-9]_Condition000_mock', ext="csv")
+df <- read_all_recordings(basepath, pat='ROI_Subject0[0-9][0-9]_Condition000_mock', EXT)
 df$cond <- rep(c(rep(1, 145), rep(2, 145)), 24)
 
 subjs <- unique(df$Part)
@@ -31,83 +48,59 @@ sbjix <- seq(1, length(subjs))
 
 # SYNCHRONY COMBINATIONS
 Firstly, we work within each ROI combination indicated:
-* roi 1 R IFG v roi 2 L HPC x cond 1, 2
-* roi 1 R IFG v roi 2 R NAC x cond 1, 2
-* roi 1 R ACC v roi 2 L STG x cond 1, 2
-* roi 1 R ACC v roi 2 R TPO x cond 1, 2
 
-We calculate a sliding window median smoothing of the rsfMRI data; followed by the correlation matrix for each condition. Correlation matrices show the intra-subject correlations on the diagonal, and inter-subject correlations off-diagonal. Diagonals (n-element vector, n = sample size) and their aggregate (scalar) are obtained for each condition (can be used for, e.g. within-subjects analysis of prognostics?)
+* roi 1 R IFG v roi 2 L HPC x cond 1
+* roi 1 R IFG v roi 2 R NAC x cond 1
+* roi 1 R ACC v roi 2 L STG x cond 1
+* roi 1 R ACC v roi 2 R TPO x cond 1
 
-To aggregate correlations, we take the mean (note that correlations can only be aggregated this way for constant N; to see why, note that Hunter-Schmidt aggregation is equivalent to average when ). We also take the mean of absolute correlations, to estimate the unsigned magnitude of connectivity. 
+* roi 1 R IFG v roi 2 L HPC x cond 2
+* roi 1 R IFG v roi 2 R NAC x cond 2
+* roi 1 R ACC v roi 2 L STG x cond 2
+* roi 1 R ACC v roi 2 R TPO x cond 2
+
+We calculate a sliding window median smoothing of the rsfMRI data, using window size = 10 and 50% overlap.
+Then comes the correlation matrix for each condition, with the intra-subject correlations on the diagonal, and inter-subject correlations off-diagonal. Diagonals (n-element vector, n = sample size) and their aggregate (scalar) are obtained for each condition (can be used for, e.g. within-subjects analysis of prognostics?)
+
+To aggregate correlations, we take the mean (note that correlations can only be aggregated this way for constant N; to see why, note that Hunter-Schmidt correlation aggregate is equivalent to average for constant N). We also take the mean of absolute correlations, to estimate the unsigned magnitude of connectivity (but this is not used yet). 
 
 We finally plot the correlation matrix for each combination.
 
 ```{r correlate}
-library(RcppRoll)
-library(reshape2)
-# s1c1.rifg.lhpc <- corr_rollmed(df, 1, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
-# c1All.rifg.lhpc <- corr_rollmed_all(df, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
-# c2all.rifg.lhpc <- corr_rollmed_all(df, 2, c("roi1_rifg", "roi2_lhpc"), 10, 5)
+# s1c1.rifg.lhpc <- corr_rollme(df, 1, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
+# c1All.rifg.lhpc <- corr_rollme_all(df, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
+# c2all.rifg.lhpc <- corr_rollme_all(df, 2, c("roi1_rifg", "roi2_lhpc"), 10, 5)
 
 # PRE - TESTS
 #####################################
-CND = 1
 
 # ROI 1 R IFG x ROI2 L HPC - COND1
-all2allc1.rifg.lhpc <- corr_rollmed_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), 10, 5, FALSE)
+all2allc1.rifg.lhpc <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), wndw, step, method)
 allc1.rifg.lhpc <- diag(all2allc1.rifg.lhpc$corr)
 avg.c1corr.rifg.lhpc <- mean(allc1.rifg.lhpc)
 ab.av.c1cor.rifg.lhpc <- mean(abs(allc1.rifg.lhpc))
-ggplot(data = melt(all2allc1.rifg.lhpc$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc1.rifg.lhpc$corr)
 
 # ROI 1 R IFG x ROI2 R NAC - COND1
-all2allc1.rifg.rnac <- corr_rollmed_all2all(df, CND, c("roi1_rifg", "roi2_rnac"), 10, 5, FALSE)
+all2allc1.rifg.rnac <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_rnac"), wndw, step, method)
 allc1.rifg.rnac <- diag(all2allc1.rifg.rnac$corr)
 avg.c1corr.rifg.rnac <- mean(allc1.rifg.rnac)
 ab.av.c1cor.rifg.rnac <- mean(abs(allc1.rifg.rnac))
-ggplot(data = melt(all2allc1.rifg.rnac$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc1.rifg.rnac$corr)
 
 # ROI 1 R ACC x ROI2 L STG - COND1
-all2allc1.racc.lstg <- corr_rollmed_all2all(df, CND, c("roi1_racc", "roi2_lstg"), 10, 5, FALSE)
+all2allc1.racc.lstg <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_lstg"), wndw, step, method)
 allc1.racc.lstg <- diag(all2allc1.racc.lstg$corr)
 avg.c1corr.racc.lstg <- mean(allc1.racc.lstg)
 ab.av.c1cor.racc.lstg <- mean(abs(allc1.racc.lstg))
-ggplot(data = melt(all2allc1.racc.lstg$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc1.racc.lstg$corr)
 
 # ROI 1 R ACC x ROI2 R TPO - COND1
-all2allc1.racc.rtpo <- corr_rollmed_all2all(df, CND, c("roi1_racc", "roi2_rtpo"), 10, 5, FALSE)
+all2allc1.racc.rtpo <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_rtpo"), wndw, step, method)
 allc1.racc.rtpo <- diag(all2allc1.racc.rtpo$corr)
 avg.c1corr.racc.rtpo <- mean(allc1.racc.rtpo)
 ab.av.c1cor.racc.rtpo <- mean(abs(allc1.racc.rtpo))
-ggplot(data = melt(all2allc1.racc.rtpo$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc1.racc.rtpo$corr)
 
 
 # POST - TESTS
@@ -115,62 +108,33 @@ ggplot(data = melt(all2allc1.racc.rtpo$corr), aes(x=Var1, y=Var2, fill=value)) +
 CND = 2
 
 # ROI 1 R IFG x ROI2 L HPC - Cond2
-all2allc2.rifg.lhpc <- corr_rollmed_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), 10, 5, FALSE)
+all2allc2.rifg.lhpc <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), wndw, step, method)
 allc2.rifg.lhpc <- diag(all2allc2.rifg.lhpc$corr)
 avg.c2corr.rifg.lhpc <- mean(allc2.rifg.lhpc)
 ab.av.c2cor.rifg.lhpc <- mean(abs(allc2.rifg.lhpc))
-ggplot(data = melt(all2allc2.rifg.lhpc$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc2.rifg.lhpc$corr)
 
 # ROI 1 R IFG x ROI2 R NAC - Cond2
-all2allc2.rifg.rnac <- corr_rollmed_all2all(df, CND, c("roi1_rifg", "roi2_rnac"), 10, 5, FALSE)
+all2allc2.rifg.rnac <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_rnac"), wndw, step, method)
 allc2.rifg.rnac <- diag(all2allc2.rifg.rnac$corr)
 avg.c2corr.rifg.rnac <- mean(allc2.rifg.rnac)
 ab.av.c2cor.rifg.rnac <- mean(abs(allc2.rifg.rnac))
-ggplot(data = melt(all2allc2.rifg.rnac$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc2.rifg.rnac$corr)
 
 # ROI 1 R ACC x ROI2 L STG - Cond2
-all2allc2.racc.lstg <- corr_rollmed_all2all(df, CND, c("roi1_racc", "roi2_lstg"), 10, 5, FALSE)
+all2allc2.racc.lstg <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_lstg"), wndw, step, method)
 allc2.racc.lstg <- diag(all2allc2.racc.lstg$corr)
 avg.c2corr.racc.lstg <- mean(allc2.racc.lstg)
 ab.av.c2cor.racc.lstg <- mean(abs(allc2.racc.lstg))
-ggplot(data = melt(all2allc2.racc.lstg$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc2.racc.lstg$corr)
 
 # ROI 1 R ACC x ROI2 R TPO - Cond2
-all2allc2.racc.rtpo <- corr_rollmed_all2all(df, CND, c("roi1_racc", "roi2_rtpo"), 10, 5, FALSE)
+all2allc2.racc.rtpo <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_rtpo"), wndw, step, method)
 allc2.racc.rtpo <- diag(all2allc2.racc.rtpo$corr)
 avg.c2corr.racc.rtpo <- mean(allc2.racc.rtpo)
 ab.av.c2cor.racc.rtpo <- mean(abs(allc2.racc.rtpo))
-ggplot(data = melt(all2allc2.racc.rtpo$corr), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
+plot_rwb_cormat(all2allc2.racc.rtpo$corr)
 ```
-
 
 # MATRIX SAMPLING
 
@@ -178,25 +142,15 @@ To obtain a random sample (without replacement) of the pair-wise correlations, w
 
 ```{r matrix-sampling}
 samp <- sample_matrix(sbjix, all2allc1.racc.lstg$corr, repl = FALSE)
-ggplot(data = melt(samp$sampmat), aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile(color = "white") +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-                       midpoint = 0, limit = c(-1,1), space = "Lab", 
-                       name="Pearson\nCorrelation") +
-  theme_minimal() + 
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, size = 12, hjust = 1))+
-  coord_fixed()
-
+plot_rwb_cormat(samp$sampmat)
 ```
 
 
 # PERMUTATION TESTING
 
-To obtain a permutation test statistic, we repeat the random sampling 10000 times, generating a distribution of correlations. We plot the observed real correlation against the distribution to see the statistical difference of the obervation from a random distribution. It is significantly different in 4 of 8 cases.
+To obtain a permutation test statistic, we repeat the random sampling 10000 times, generating a distribution of correlations. We plot the observed real correlation against the distribution to see the statistical difference of the obervation from a random distribution; actual _p_-value is computed by counting the proportion of random samples which lie _beyond_ the observation, i.e. are absolutely greater. It is significantly different in 4 of 8 cases here: the underlying pattern seems to be that correlations increase during the intervention, comparing pre-test to post-test.
 
 ```{r permutation}
-REPS <- 10000
-
 # PRE - TESTS
 #####################################
 # ROI1 R IFG x ROI2 L HPC - COND1
