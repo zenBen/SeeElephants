@@ -12,6 +12,7 @@ library(tidyverse)
 library(RcppRoll)
 library(reshape2)
 library(DAAG)
+library(cocor)
 source('read_parse_csv.R')
 source('dynFC_functions.R')
 ```
@@ -214,8 +215,23 @@ Are the change of correlations from condition 1 to condition 2 significant?
 Testing by one-sample t-test and one-sample permutation test, we get similar results by each method.
 
 ```{r prepost}
+# Tests for comparison 1: rACC x lSTG
+# Naive ways
 t.test(allc2.racc.lstg - allc1.racc.lstg)
 onet.permutation(allc2.racc.lstg - allc1.racc.lstg)
+# COCOR way (needs correlations of all combos)
+racc1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi1_racc", "roi1_racc"), wndw, step)
+racc1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi1_racc", "roi2_lstg"), wndw, step)
+lstg1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi1_racc"), wndw, step)
+lstg1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi2_lstg"), wndw, step)
+
+# PRE - TESTS
+#####################################
+
+# ROI 1 R IFG x ROI2 L HPC - COND1
+all2allc1.rifg.lhpc <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), wndw, step, method)
+
+
 
 t.test(allc2.racc.rtpo - allc1.racc.rtpo)
 onet.permutation(allc2.racc.rtpo - allc1.racc.rtpo)
@@ -227,12 +243,5 @@ t.test(allc2.rifg.rnac - allc1.rifg.rnac)
 onet.permutation(allc2.rifg.rnac - allc1.rifg.rnac)
 
 ```
-
-
-
-
-
-
-
 
 
