@@ -7,7 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-knitr::opts_knit$set(root.dir = '/home/ben/Benslab/project_TBI/SeeElephants/TBI_dynFC')
+knitr::opts_knit$set(root.dir = '/home/bcowley/Benslab/project_TBI/SeeElephants/TBI_dynFC')
 library(tidyverse)
 library(RcppRoll)
 library(reshape2)
@@ -218,12 +218,14 @@ Testing by one-sample t-test and one-sample permutation test, we get similar res
 # Tests for comparison 1: rACC x lSTG
 # Naive ways
 t.test(allc2.racc.lstg - allc1.racc.lstg)
+ks.test(allc1.racc.lstg, allc2.racc.lstg)
 onet.permutation(allc2.racc.lstg - allc1.racc.lstg)
 # COCOR way (needs correlations of all combos)
 racc1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi1_racc", "roi1_racc"), wndw, step)
 racc1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi1_racc", "roi2_lstg"), wndw, step)
 lstg1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi1_racc"), wndw, step)
 lstg1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi2_lstg"), wndw, step)
+
 
 # PRE - TESTS
 #####################################
