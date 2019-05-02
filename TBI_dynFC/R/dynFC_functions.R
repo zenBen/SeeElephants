@@ -134,15 +134,43 @@ pool_cocor_depgrp_nonol <- function(r.jk, r.hm, r.jh, r.jm, r.kh, r.km, n)
 }
 
 
-plot_kstest <- function(names)
+ks_testNplot <- function(samples, names, plot_chk = TRUE)
 {
+  require(ggplot2)
+  if (length(samples) > 1){
+    s1 <- unlist(samples[1])
+    s2 <- unlist(samples[2])
+  }else{
+    s1 <- s2 <- samples
+  }
+  if (length(names) > 1){
+    n1 <- names[1]
+    n2 <- names[2]
+  }else{
+    n1 <- n2 <- names
+  }
+  
+  print(ks.test(s1, s2))
+
+  if (!plot_chk) invisible()
+  
+  group <- c(rep(n1, length(s1)), rep(n2, length(s2)))
+  dat <- data.frame(KSD = c(s1, s2), group = group)
+  cdf1 <- ecdf(s1)
+  cdf2 <- ecdf(s2) 
+  
+  minMax <- seq(min(s1, s2), max(s1, s2), length.out=length(s1)) 
+  x0 <- minMax[which( abs(cdf1(minMax) - cdf2(minMax)) == max(abs(cdf1(minMax) - cdf2(minMax))) )] 
+  y0 <- cdf1(x0) 
+  y1 <- cdf2(x0) 
+  
   ggplot(dat, aes(x = KSD, group = group, colour = group, linetype=group))+
     stat_ecdf(size=1) +
-    xlab("mm") +
-    ylab("Cumulitive Distibution") +
+    xlab("dynFC") +
+    ylab("Cumulative Distribution") +
     geom_segment(aes(x = x0[1], y = y0[1], xend = x0[1], yend = y1[1]),
                  linetype = "dashed", color = "red") +
     geom_point(aes(x = x0[1] , y= y0[1]), color="red", size=1) +
     geom_point(aes(x = x0[1] , y= y1[1]), color="red", size=1) +
-    ggtitle(paste("K-S Test: ", names[1], names[2]))
+    ggtitle(paste("K-S Test:", n1, "/", n2))
 }

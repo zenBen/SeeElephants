@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 knitr::opts_knit$set(root.dir = '/home/bcowley/Benslab/project_TBI/SeeElephants/TBI_dynFC')
 library(tidyverse)
 library(RcppRoll)
@@ -25,12 +25,18 @@ basepath <- 'data'
 EXT <- 'csv'
 # List of conditions
 timecond <- c('pre', 'post')
+ROI1ifg <- "roi1_rifg"
+# ROI1ifg <- "roi1_atlrifg"
+ROI1acc <- "roi1_racc"
+# ROI1acc <- "roi1_atlrpcg"
 # sliding window parameters
 wndw <- 10
 step <- wndw / 2 # 50% overlap steps
 method <- "mean" # options are: max, mean, median, min, prod, sd, sum, var; see ?RcppRoll
 REPS <- 10000
 CND <- 1
+
+print(paste("ROI 1s are: ", ROI1ifg, " & ", ROI1acc))
 ```
 
 # DATA WRANGLING
@@ -38,8 +44,7 @@ CND <- 1
 After exporting subject-wise ROIs from Matlab data to csv files, we read all data into a single long-format data structure. We label this data with the condition, 1 = pre, 2 = post
 
 ```{r wrangle}
-# List of conditions
-
+# GET DATA
 df <- read_all_recordings(basepath, pat='ROI_Subject0[0-9][0-9]_Condition000_mock', EXT)
 df$cond <- rep(c(rep(1, 145), rep(2, 145)), 24)
 
@@ -69,36 +74,36 @@ To aggregate correlations, we take the mean (note that correlations can only be 
 We finally plot the correlation matrix for each combination.
 
 ```{r correlate}
-# s1c1.rifg.lhpc <- corr_rollme(df, 1, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
-# c1All.rifg.lhpc <- corr_rollme_all(df, 1, c("roi1_rifg", "roi2_lhpc"), 10, 5)
-# c2all.rifg.lhpc <- corr_rollme_all(df, 2, c("roi1_rifg", "roi2_lhpc"), 10, 5)
+# s1c1.rifg.lhpc <- corr_rollme(df, 1, 1, c(ROI1ifg, "roi2_lhpc"), 10, 5)
+# c1All.rifg.lhpc <- corr_rollme_all(df, 1, c(ROI1ifg, "roi2_lhpc"), 10, 5)
+# c2all.rifg.lhpc <- corr_rollme_all(df, 2, c(ROI1ifg, "roi2_lhpc"), 10, 5)
 
 # PRE - TESTS
 #####################################
 
 # ROI 1 R IFG x ROI2 L HPC - COND1
-all2allc1.rifg.lhpc <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), wndw, step, method)
+all2allc1.rifg.lhpc <- corr_rollme_all2all(df, CND, c(ROI1ifg, "roi2_lhpc"), wndw, step, method)
 allc1.rifg.lhpc <- diag(all2allc1.rifg.lhpc$corr)
 avg.c1corr.rifg.lhpc <- mean(allc1.rifg.lhpc)
 ab.av.c1cor.rifg.lhpc <- mean(abs(allc1.rifg.lhpc))
 plot_rwb_cormat(all2allc1.rifg.lhpc$corr)
 
 # ROI 1 R IFG x ROI2 R NAC - COND1
-all2allc1.rifg.rnac <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_rnac"), wndw, step, method)
+all2allc1.rifg.rnac <- corr_rollme_all2all(df, CND, c(ROI1ifg, "roi2_rnac"), wndw, step, method)
 allc1.rifg.rnac <- diag(all2allc1.rifg.rnac$corr)
 avg.c1corr.rifg.rnac <- mean(allc1.rifg.rnac)
 ab.av.c1cor.rifg.rnac <- mean(abs(allc1.rifg.rnac))
 plot_rwb_cormat(all2allc1.rifg.rnac$corr)
 
 # ROI 1 R ACC x ROI2 L STG - COND1
-all2allc1.racc.lstg <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_lstg"), wndw, step, method)
+all2allc1.racc.lstg <- corr_rollme_all2all(df, CND, c(ROI1acc, "roi2_lstg"), wndw, step, method)
 allc1.racc.lstg <- diag(all2allc1.racc.lstg$corr)
 avg.c1corr.racc.lstg <- mean(allc1.racc.lstg)
 ab.av.c1cor.racc.lstg <- mean(abs(allc1.racc.lstg))
 plot_rwb_cormat(all2allc1.racc.lstg$corr)
 
 # ROI 1 R ACC x ROI2 R TPO - COND1
-all2allc1.racc.rtpo <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_rtpo"), wndw, step, method)
+all2allc1.racc.rtpo <- corr_rollme_all2all(df, CND, c(ROI1acc, "roi2_rtpo"), wndw, step, method)
 allc1.racc.rtpo <- diag(all2allc1.racc.rtpo$corr)
 avg.c1corr.racc.rtpo <- mean(allc1.racc.rtpo)
 ab.av.c1cor.racc.rtpo <- mean(abs(allc1.racc.rtpo))
@@ -110,28 +115,28 @@ plot_rwb_cormat(all2allc1.racc.rtpo$corr)
 CND = 2
 
 # ROI 1 R IFG x ROI2 L HPC - Cond2
-all2allc2.rifg.lhpc <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), wndw, step, method)
+all2allc2.rifg.lhpc <- corr_rollme_all2all(df, CND, c(ROI1ifg, "roi2_lhpc"), wndw, step, method)
 allc2.rifg.lhpc <- diag(all2allc2.rifg.lhpc$corr)
 avg.c2corr.rifg.lhpc <- mean(allc2.rifg.lhpc)
 ab.av.c2cor.rifg.lhpc <- mean(abs(allc2.rifg.lhpc))
 plot_rwb_cormat(all2allc2.rifg.lhpc$corr)
 
 # ROI 1 R IFG x ROI2 R NAC - Cond2
-all2allc2.rifg.rnac <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_rnac"), wndw, step, method)
+all2allc2.rifg.rnac <- corr_rollme_all2all(df, CND, c(ROI1ifg, "roi2_rnac"), wndw, step, method)
 allc2.rifg.rnac <- diag(all2allc2.rifg.rnac$corr)
 avg.c2corr.rifg.rnac <- mean(allc2.rifg.rnac)
 ab.av.c2cor.rifg.rnac <- mean(abs(allc2.rifg.rnac))
 plot_rwb_cormat(all2allc2.rifg.rnac$corr)
 
 # ROI 1 R ACC x ROI2 L STG - Cond2
-all2allc2.racc.lstg <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_lstg"), wndw, step, method)
+all2allc2.racc.lstg <- corr_rollme_all2all(df, CND, c(ROI1acc, "roi2_lstg"), wndw, step, method)
 allc2.racc.lstg <- diag(all2allc2.racc.lstg$corr)
 avg.c2corr.racc.lstg <- mean(allc2.racc.lstg)
 ab.av.c2cor.racc.lstg <- mean(abs(allc2.racc.lstg))
 plot_rwb_cormat(all2allc2.racc.lstg$corr)
 
 # ROI 1 R ACC x ROI2 R TPO - Cond2
-all2allc2.racc.rtpo <- corr_rollme_all2all(df, CND, c("roi1_racc", "roi2_rtpo"), wndw, step, method)
+all2allc2.racc.rtpo <- corr_rollme_all2all(df, CND, c(ROI1acc, "roi2_rtpo"), wndw, step, method)
 allc2.racc.rtpo <- diag(all2allc2.racc.rtpo$corr)
 avg.c2corr.racc.rtpo <- mean(allc2.racc.rtpo)
 ab.av.c2cor.racc.rtpo <- mean(abs(allc2.racc.rtpo))
@@ -217,32 +222,26 @@ Testing by one-sample t-test and one-sample permutation test, we get similar res
 ```{r prepost}
 # Tests for comparison 1: rACC x lSTG
 # Naive ways
-t.test(allc2.racc.lstg - allc1.racc.lstg)
-ks.test(allc1.racc.lstg, allc2.racc.lstg)
-onet.permutation(allc2.racc.lstg - allc1.racc.lstg)
+t.test(allc1.racc.lstg, allc2.racc.lstg)
+twotPermutation(allc1.racc.lstg, allc2.racc.lstg)
+ks_testNplot(list(allc1.racc.lstg, allc2.racc.lstg), c("rACCxlSTG, cond-1", "rACCxlSTG, cond-2"))
 # COCOR way (needs correlations of all combos)
-racc1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi1_racc", "roi1_racc"), wndw, step)
-racc1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi1_racc", "roi2_lstg"), wndw, step)
-lstg1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi1_racc"), wndw, step)
-lstg1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi2_lstg"), wndw, step)
+# racc1.racc2 <- corr_rollme_all(df, c(1, 2), c(ROI1acc, ROI1acc), wndw, step)
+# racc1.lstg2 <- corr_rollme_all(df, c(1, 2), c(ROI1acc, "roi2_lstg"), wndw, step)
+# lstg1.racc2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", ROI1acc), wndw, step)
+# lstg1.lstg2 <- corr_rollme_all(df, c(1, 2), c("roi2_lstg", "roi2_lstg"), wndw, step)
 
+t.test(allc1.racc.rtpo, allc2.racc.rtpo)
+twotPermutation(allc1.racc.rtpo, allc2.racc.rtpo)
+ks_testNplot(list(allc1.racc.rtpo, allc2.racc.rtpo), c("rACCxrTP, cond-1", "rACCxrTP, cond-2"))
 
-# PRE - TESTS
-#####################################
+t.test(allc1.rifg.lhpc, allc2.rifg.lhpc)
+twotPermutation(allc1.rifg.lhpc, allc2.rifg.lhpc)
+ks_testNplot(list(allc1.rifg.lhpc, allc2.rifg.lhpc), c("rIFGxlHPC, cond-1", "rIFGxlHPC, cond-2"))
 
-# ROI 1 R IFG x ROI2 L HPC - COND1
-all2allc1.rifg.lhpc <- corr_rollme_all2all(df, CND, c("roi1_rifg", "roi2_lhpc"), wndw, step, method)
-
-
-
-t.test(allc2.racc.rtpo - allc1.racc.rtpo)
-onet.permutation(allc2.racc.rtpo - allc1.racc.rtpo)
-
-t.test(allc2.rifg.lhpc - allc1.rifg.lhpc)
-onet.permutation(allc2.rifg.lhpc - allc1.rifg.lhpc)
-
-t.test(allc2.rifg.rnac - allc1.rifg.rnac)
-onet.permutation(allc2.rifg.rnac - allc1.rifg.rnac)
+t.test(allc1.rifg.rnac, allc2.rifg.rnac)
+twotPermutation(allc1.rifg.rnac, allc2.rifg.rnac)
+ks_testNplot(list(allc1.rifg.rnac, allc2.rifg.rnac), c("rIFGxrNAC, cond-1", "rIFGxrNAC, cond-2"))
 
 ```
 
