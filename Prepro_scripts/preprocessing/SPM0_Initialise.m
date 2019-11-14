@@ -4,23 +4,23 @@ function SPM0_Initialise(indir, outdir, names, varargin)
 %--------------------------------------------------------------------------
 % Initialise inputs
 p = inputParser;
-p.addRequired('indir', @isstr);
-p.addRequired('outdir', @isstr);
-p.addRequired('names', @isstruct);
+p.addRequired('indir', @ischar)
+p.addRequired('outdir', @ischar)
+p.addRequired('names', @isstruct)
 
-p.addParameter('datdir', 'rs', @isstr);
-p.addParameter('rawdir', 'rs_rawdata', @isstr);
+% TODO : MATCH BIDS SPECIFICATION
+p.addParameter('datdir', 'rs', @ischar)
+p.addParameter('rawdir', 'rs_rawdata', @ischar)
 
-p.parse(indir, outdir, names, varargin{:});
+p.parse(indir, outdir, names, varargin{:})
 Arg = p.Results;
 
 
 %% Loop to copy raw_data to new folder per subject
-for suje = 1:size(names, 1)
-    %NOTE, NOELIA'S PATHS HAD THIS ENDING: % , [(names(suje).name) '_1']);
-    srcfile = dir(fullfile(indir, names(suje).name, Arg.rawdir, 'f*.nii'));
-    sub_path = fullfile(outdir, names(suje).name, Arg.datdir);
-    if ~isdir(sub_path)
+for sbji = 1:size(names, 1)
+    srcfile = dir(fullfile(indir, names(sbji).name, Arg.rawdir, 'f*.nii'));
+    sub_path = fullfile(outdir, names(sbji).name, Arg.datdir);
+    if ~isfolder(sub_path)
         mkdir(sub_path)
     end
     for sf = 1:length(srcfile)
@@ -29,7 +29,7 @@ for suje = 1:size(names, 1)
         end
     end
     [srcfile.folder] = deal(sub_path);
-    names(suje).sources = srcfile;
+    names(sbji).sources = srcfile;
 end
 
 %----------------------------------------------------
