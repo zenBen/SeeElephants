@@ -1,31 +1,47 @@
 function BN_conn_batch(names, outdir, varargin)
 %BN_CONN_BATCH batch preprocessing for multi-subject single-session data
 %
-% Description: 
+% Description: create a CONN batch struct and run it or open it in CONN GUI
+%   CONN documents fields from the below list:
+%    filename   conn_*.mat project file (defaults to currently open project)
+%    subjects   Subset of subjects to run (defaults to all)
+%    parallel   Parallelization options (defaults to local / no parallel)
+%    Setup      Information/processes for experiment Setup and Preprocessing
+%    Denoising  Information/processes regarding Denoising step
+%    Analysis   Information/processes regarding first-level analyses
+%    Results    Information/processes regarding second-level analyses/results
+%    QA         Information/processes regarding Quality Assurance plots
 %
 % Syntax:
 %   BN_conn_batch(names, outdir, varargin)
 %
 % Input:
-%   'names'     struct array, subject-wise data folders in Matlab struct
+%   names       struct array, subject-wise data folders in Matlab struct
 %                   OR
 %               string, path to data files but no filtering supported
 %                   OR
 %               cell string array, many paths to data (with no filtering)
 % 
-%   'outdir'    Directory to write processed files
+%   outdir      Directory to write processed files
 %
 % varargin:
-%   'connfname' string, name of the conn output file,
-%               default = "conn_batch_DDMMYYYYHHMMSS"
+%   filename    string, name of the conn output file,
+%               default = fullfile(outdir, "conn_batch_DDMMYYYYHHMMSS.mat")
 % 
-%   'do_batch'  logical, run conn_batch() on batch struct, default = true
-%   'prompt'    logical, prompt for path to data files, default = false
-%   'GUI'       logical, call the CONN GUI after batch, default = false
+%   do_batch    logical, run conn_batch() on batch struct, default = true
+%   prompt      logical, prompt for path to data files, default = false
+%   GUI         logical, call the CONN GUI after batch, default = false
 % 
-%   setup       scalar struct, arguments for CONN_setup in struct form
-%   denoise     scalar struct, arguments for CONN_denoise in struct form
-%   level1      scalar struct, arguments for CONN_level1 in struct form
+%   Setup       scalar struct, arguments for CONN_setup in struct form
+%               default = empty, CONN_setup is not called
+%   Denoising   scalar struct, arguments for CONN_denoise in struct form
+%               default = empty, CONN_denoise is not called
+%   Analysis    scalar struct, arguments for CONN_level1 in struct form
+%               default = empty, CONN_level1 is not called
+%   Results     scalar struct, arguments for CONN_level2 in struct form
+%               default = empty, CONN_level2 is not called
+%   QA          scalar struct, arguments for CONN_qa in struct form
+%               default = empty, CONN_qa is not called
 %
 % Output:
 %   none
@@ -57,21 +73,37 @@ function BN_conn_batch(names, outdir, varargin)
 
 %% Initialise -----------------------------------
 p = inputParser;
+p.KeepUnmatched = true;
 
 % Define project location, subjects, and name
 p.addRequired('names', @(x) isstruct(x) || ischar(x) || iscellstr(x))
 p.addRequired('outdir', @ischar)
 
-p.addParameter('connfname'...
+p.addParameter('filename'...
     , fullfile(outdir, ['conn_batch_' datestr(now, 30) '.mat']), @ischar)
 
 p.addParameter('do_batch', true, @islogical)
 p.addParameter('prompt', false, @islogical)
 p.addParameter('GUI', false, @islogical)
 
-p.addParameter('setup', struct(), @isstruct)
-p.addParameter('denoise', struct(), @isstruct)
-p.addParameter('level1', struct(), @isstruct)
+p.addParameter('Setup', struct(), @isstruct)
+cnn_stgs = {'Denoising' 
+            'Analysis' 
+            'vvAnalysis' 
+            'dynAnalysis'
+            'Results' 
+            'vvResults' 
+            'QA'};
+for i = 1:numel(cnn_stgs)
+    p.addParameter(cnn_stgs{i}, struct(), @isstruct)
+end
+% p.addParameter('Denoising', struct(), @isstruct)
+% p.addParameter('Analysis', struct(), @isstruct)
+% p.addParameter('dynAnalysis', struct(), @isstruct)
+% p.addParameter('vvAnalysis', struct(), @isstruct)
+% p.addParameter('Results', struct(), @isstruct)
+% p.addParameter('vvResults', struct(), @isstruct)
+% p.addParameter('QA', struct(), @isstruct)
 
 p.parse(names, outdir, varargin{:})
 Arg = p.Results;
@@ -82,19 +114,32 @@ if Arg.prompt && isempty(names)
     names = inputdlg('Absolute or relative path to data:', 'Data Path', 1);
 end
 if ischar(names) || iscellstr(names) %#ok<*ISCLSTR>
-    names = build_fileset(names);
+    names = build_dataset(names);
+end
+
+
+%% Create batch
+[~, batch.name, ~] = fileparts(Arg.filename);
+batch.filename = Arg.filename;
+batch.gui = Arg.GUI;
+% Add other top-level fields of batch based on unmatched parameters
+Unmatch_names = fieldnames(p.Unmatched);
+for i = 1:numel(Unmatch_names)
+    batch.(Unmatch_names{i}) = p.Unmatched.(Unmatch_names{i});
 end
 
 
 %% PREPARE & CONDUCT connectivity analyses
-batch = CONN_setup(names, Arg.connfname, Arg.setup); % CONN Setup
-
-if ~isempty(fieldnames(Arg.denoise))
-    batch = CONN_denoise(batch, Arg.denoise); % CONN Denoising
+if ~isempty(fieldnames(Arg.Setup)) % CONN Setup
+    batch = CONN_Setup(names, batch, Arg.Setup); 
 end
 
-if ~isempty(fieldnames(Arg.level1))
-    batch = CONN_level1(batch, Arg.level1); % CONN Analysis (1st-Level)
+for i = 1:numel(cnn_stgs)
+    if ~isempty(fieldnames(Arg.(cnn_stgs{i})))
+        CONN_stage_i = str2func(['CONN_' cnn_stgs{i}]);
+        batch = CONN_stage_i(batch, Arg.(cnn_stgs{i})); % CONN stage i
+    end
+
 end
 
 

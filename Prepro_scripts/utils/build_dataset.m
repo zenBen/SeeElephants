@@ -9,8 +9,8 @@ function names = build_dataset(indir, varargin)
 % VARARGIN
 %   subdir  string, some fixed directory to append to path
 % 
-% NOTE  This function calls dirflt and can use its getfile AND getdir args,
-%       which are true by default, to prevent return of files or dirs
+% NOTE  This function calls dirflt: pass getfile=0 OR getdir=0 to prevent 
+%       return of files or dirs (these are true by default)
 %       This function can use any of name_filter()'s arguments to, e.g. 
 %       filter subjects by name, number, or both
 % 

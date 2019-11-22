@@ -1,18 +1,16 @@
-function batch = CONN_level1(batch, varargin)
-%% CONN_LEVEL1 
+function batch = CONN_Analysis(batch, varargin)
+%% CONN_ANALYSIS 1st level analysis batch specification
 % 
 %--------------------------------------------------------------------------
 
 
 %% Initialise defaults
 p = inputParser;
+p.KeepUnmatched = true;
+
 p.addRequired('batch', @isstruct)
 
 p.addParameter('save', true, @islogical)
-
-% Level 1 params
-p.addParameter('done', 1, @isscalar)
-p.addParameter('ovw', 'No', @ischar)
 
 %Sequential number identifying each set of independent first-level analyses
 p.addParameter('analysis_num', 1, @isscalar)
@@ -37,9 +35,6 @@ Arg = p.Results;
 
 
 %% Create batch fields for level 1 analysis
-batch.Analysis.done = Arg.done;
-batch.Analysis.overwrite = Arg.ovw;
-
 batch.Analysis.analysis_number = Arg.analysis_num;
 batch.Analysis.type = Arg.analysis_type;
 batch.Analysis.measure = Arg.analysis_measure;
@@ -49,6 +44,13 @@ batch.Analysis.sources.names = Arg.sources_names;
 ns = numel(Arg.sources_names);
 batch.Analysis.sources.dimensions = repmat({Arg.sources_dims}, 1, ns);
 batch.Analysis.sources.deriv = repmat({Arg.sources_deriv}, 1, ns);
+
+
+%% Add other top-level fields of batch.Analysis based on unmatched parameters
+Unmatch_names = fieldnames(p.Unmatched);
+for i = 1:numel(Unmatch_names)
+    batch.Analysis.(Unmatch_names{i}) = p.Unmatched.(Unmatch_names{i});
+end
 
 
 %% Save batch if required
