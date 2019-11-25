@@ -1,4 +1,4 @@
-function BN_conn_batch(names, outdir, varargin)
+function batch = BN_conn_batch(names, outdir, varargin)
 %BN_CONN_BATCH batch preprocessing for multi-subject single-session data
 %
 % Description: create a CONN batch struct and run it or open it in CONN GUI
@@ -44,7 +44,7 @@ function BN_conn_batch(names, outdir, varargin)
 %               default = empty, CONN_qa is not called
 %
 % Output:
-%   none
+%   batch       struct, the structure for batching CONN analysis
 %
 % NOTE
 %

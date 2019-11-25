@@ -200,14 +200,13 @@ if isscalar(Arg.RT)
 end
 batch.Setup.nsubjects = Arg.nsubjects;
 batch.Setup.nsessions = Arg.nsessions;
-
 batch.Setup.structural_sessionspecific = Arg.structural_sessionspecific;
 
-batch.Setup.reorient = Arg.reorient;
-batch.Setup.analyses = Arg.analyses;
-batch.Setup.voxelmask = Arg.voxelmask;
-batch.Setup.voxelresolution = Arg.voxelresolution;
-batch.Setup.outputfiles = Arg.outputfiles;
+% batch.Setup.reorient = Arg.reorient;
+% batch.Setup.analyses = Arg.analyses;
+% batch.Setup.voxelmask = Arg.voxelmask;
+% batch.Setup.voxelresolution = Arg.voxelresolution;
+% batch.Setup.outputfiles = Arg.outputfiles;
 
 
 %% GET FILES
@@ -273,25 +272,25 @@ end
 
 
 %% Define 1st level covariates
-batch.Setup.l1covariates.names = Arg.covarname;
+batch.Setup.covariates.names = Arg.covar_names;
 if Arg.structural_sessionspecific
     for sbi = 1:Arg.nsubjects
-        for covi = 1:numel(Arg.covarname)
+        for covi = 1:numel(Arg.covar_names)
             for ssi = 1:Arg.nsessions
                 pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name);
-                batch.Setup.l1covariates.files{sbi}{covi}{ssi}{1} = cellstr(...
+                batch.Setup.covariates.files{sbi}{covi}{ssi}{1} = cellstr(...
                     spm_select(...
-                    'FPList', fullfile(pi, Arg.dtdir), Arg.covarf_rgx{covi}));
+                    'FPList', fullfile(pi, Arg.dtdir), Arg.covar_files{covi}));
             end
         end
     end
 else
     for sbi = 1:Arg.nsubjects
-        for covi = 1:numel(Arg.covarname)
+        for covi = 1:numel(Arg.covar_names)
             pi = fullfile(names(sbi).folder, names(sbi).name);
-            batch.Setup.l1covariates.files{sbi}{covi}{1} = cellstr(...
+            batch.Setup.covariates.files{sbi}{covi}{1} = cellstr(...
                 spm_select(...
-                'FPList', fullfile(pi, Arg.dtdir), Arg.covarf_rgx{covi}));
+                'FPList', fullfile(pi, Arg.dtdir), Arg.covar_files{covi}));
         end
     end
 end
@@ -302,31 +301,44 @@ end
 % as discussed. One for patients and another for controls. You can check how 
 % this is specified in the mat file. Here patients and controls covariates 
 % are in rows 109-110 in CONN_x.Setup.l2covariates.names
-% FIXME : CHECK THIS WORKS!!
-if ~isempty(Arg.effects_file)
-    if iscell(Arg.effects_file)
-        l2 = readtable(Arg.effects_file{1}, 'ReadRowN', 1);
-        if numel(Arg.effects_file) > 1
-            for l2i = 2:numel(Arg.effects_file)
-                l2 = join(l2, readtable(Arg.effects_file{l2i}, 'ReadRowN', 1));
+l2type = {'effect' 'group'};
+for l2t = l2type
+    l2file = Arg.([l2t{:} 's_file']);
+    l2desc = [l2t{:} '_descrip'];
+    l2name = [l2t{:} '_names'];
+    if ~isempty(l2file)
+        if iscell(l2file)
+            l2 = readtable(l2file{1}, 'ReadRowN', 1);
+            if numel(l2file) > 1
+                for l2i = 2:numel(l2file)
+                    tmp = readtable(l2file{l2i}, 'ReadRowN', 1);
+                    l2 = join(l2, tmp, 'Keys', 'RowNames');
+                end
             end
+        else
+            l2 = readtable(l2file, 'ReadRowNames', true);
+        end
+        dsci = ismember(lower(l2.Properties.RowNames), 'description');
+        if any(dsci)
+            batch.Setup.subjects.descrip = l2{dsci, :};
+            l2(dsci, :) = [];
+        end
+        batch.Setup.subjects.(l2name) = l2.Properties.VariableNames;
+        for sbi = 1:size(l2, 1)
+            batch.Setup.subjects.([l2t{:} 's']){sbi} = table2cell(l2(sbi, :));
         end
     else
-        l2 = readtable(Arg.effects_file, 'ReadRowNames', true);
+        if ~isempty(Arg.(l2desc))
+            batch.Setup.subjects.(l2desc) = Arg.(l2desc);
+        end
+        if ~isempty(Arg.(l2name))
+            batch.Setup.subjects.(l2name) = Arg.(l2name);
+        end
+        if ~isempty(Arg.([l2t{:} 's']))
+            batch.Setup.subjects.([l2t{:} 's']) = Arg.([l2t{:} 's']);
+        end
     end
-    dsci = ismember(l2.RowNames, 'description');
-    if any(dsci)
-        batch.Setup.subjects.descrip = l2(dsci, :);
-        l2(dsci, :) = [];
-    end
-    batch.Setup.subjects.effect_names = l2.VariableNames;
-    batch.Setup.subjects.effects = table2cell(l2);
-else
-    batch.Setup.subjects.descrip = Arg.effect_descrip;
-    batch.Setup.subjects.effect_names = Arg.effect_names;
-    batch.Setup.subjects.effects = Arg.effects;
 end
-% FIXME : REPEAT FOR GROUPS!
 
 
 %% Setup preprocessing
