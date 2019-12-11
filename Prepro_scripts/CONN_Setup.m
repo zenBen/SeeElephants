@@ -24,15 +24,14 @@ function batch = CONN_Setup(names, batch, varargin)
 % 
 %--------------------------------------------------------------------------
 
+
+% TODO - PROVIDE COMPLETE PARAMETER SPECIFICATION FOR CONN
 % TODO - HANDLE Setup.rois.dataset>0 I.E. HOW TO FIND FILES FOR XTRA DATASETS:
 %        "one or several additional functional datasets (e.g. vdm files for 
 %         susceptibility distorition, alternative functional files for ROI-
 %         level timeseries extraction, etc.", ALSO SESSION-SPECIFIC GM, WM, CSF
-% TODO - PROVIDE COMPLETE PARAMETER SPECIFICATION FOR CONN
-% TODO : DOES CONN HAVE OTHER WAYS OF TAKING 1st / 2nd LEVEL COVARS??
-% TODO : SPECIFY MORE GENERIC OR ELSE NULL DEFAULTS FOR COVARIATES
+% TODO : SPECIFY MORE GENERIC OR ELSE NULL DEFAULTS FOR L1 COVARIATES??
 % TODO : MATCH BIDS SPECIFICATION IN FILE-FINDING DEFAULTS: REGEX, STD DIRS
-% TODO : BUILD COVARIATE FILE-READING FUNCTIONALITY
 % TODO : nscans - typically found from functionals?
 % TODO : HANDLE importfile OPTION FOR CONN CONDITIONS FIELD!!
 
@@ -100,11 +99,6 @@ p.addParameter('covar_names', {'motion', 'outliers'}, @iscellstr)
 p.addParameter('covar_files', {'^rp_a.*\.txt$', '^rs_swrora.*\.mat$'}, @iscellstr)
 
 % 2nd level covariates
-% effect_names  : subjects.effect_names{neffect} char array of second-level covariate name
-% effects       : subjects.effects{neffect} vector of size [nsubjects,1] defining second-level effects
-% group_names   : subjects.group_names{ngroup} char array of second-level group name
-% groups        : subjects.group vector of size [nsubjects,1] (with values from 1 to ngroup) defining subject groups
-% descrip       : (optional) subjects.descrip{neffect/ngroup} char array of effect/group description (long name; for display only)
 p.addParameter('effects_file', '', @(x) iscellstr(x) || ischar(x))
 p.addParameter('effect_names', {''}, @iscellstr)
 p.addParameter('effects', {zeros(size(names, 1), 1)}, @iscell)
@@ -297,10 +291,6 @@ end
 
 
 %% Define 2nd level covariates
-% CONN_x.Setup.l2covariates you would need to add at least 2 more covariates 
-% as discussed. One for patients and another for controls. You can check how 
-% this is specified in the mat file. Here patients and controls covariates 
-% are in rows 109-110 in CONN_x.Setup.l2covariates.names
 l2type = {'effect' 'group'};
 for l2t = l2type
     l2file = Arg.([l2t{:} 's_file']);
