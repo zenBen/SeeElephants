@@ -30,10 +30,11 @@ function batch = CONN_Setup(names, batch, varargin)
 %        "one or several additional functional datasets (e.g. vdm files for 
 %         susceptibility distorition, alternative functional files for ROI-
 %         level timeseries extraction, etc.", ALSO SESSION-SPECIFIC GM, WM, CSF
-% TODO : SPECIFY MORE GENERIC OR ELSE NULL DEFAULTS FOR L1 COVARIATES??
+% TODO : L1 COVARIATES - SPECIFY MORE GENERIC OR ELSE NULL DEFAULTS??
 % TODO : MATCH BIDS SPECIFICATION IN FILE-FINDING DEFAULTS: REGEX, STD DIRS
 % TODO : nscans - typically found from functionals?
 % TODO : HANDLE importfile OPTION FOR CONN CONDITIONS FIELD!!
+% TODO : HANDLE SESSION SPECIFIC STRUCTURAL REGEXES
 
 
 %% Initialise defaults
@@ -56,14 +57,15 @@ p.addParameter('T1dir', 'anat', @ischar)
 
 % Data files: functional, structural, masks, and their parameters
 p.addParameter('structural_sessionspecific', false, @islogical)
-p.addParameter('functional', '^swroraLASA.*\.nii$', @ischar)
-p.addParameter('structural', '^wrofLASA.*\.nii$', @ischar)
-p.addParameter('grey_rgx', '^wc1cor.*\.nii$', @ischar)
-p.addParameter('white_rgx', '^wc2cor.*\.nii$', @ischar)
-p.addParameter('csf_rgx', '^wc3cor.*\.nii$', @ischar)
-p.addParameter('grey_dim', 1, @isscalar)
-p.addParameter('white_dim', 3, @isscalar)
-p.addParameter('csf_dim', 3, @isscalar)
+p.addParameter('functional', '^swroraLASA.*\.nii$', @(x) ischar(x) || iscellstr(x))
+p.addParameter('structural', '^wrofLASA.*\.nii$', @(x) ischar(x) || iscellstr(x))
+p.addParameter('grey_rgx', '^wc1cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
+p.addParameter('white_rgx', '^wc2cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
+p.addParameter('csf_rgx', '^wc3cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
+% FIXME - REMOVE SCALAR PARAMS??
+% p.addParameter('grey_dim', 1, @isscalar)
+% p.addParameter('white_dim', 3, @isscalar)
+% p.addParameter('csf_dim', 3, @isscalar)
 
 % FIXME : ROIs - these are complex structures with embedded nifti - need
 %                another function to build them?
@@ -96,7 +98,7 @@ p.addParameter('cond_filter', [0.01 0.1], @(x) isnumeric(x) || iscell(x))
 
 % 1ST level covariates
 p.addParameter('covar_names', {'motion', 'outliers'}, @iscellstr)
-p.addParameter('covar_files', {'^rp_a.*\.txt$', '^rs_swrora.*\.mat$'}, @iscellstr)
+p.addParameter('covar_files', {'^rp_a.*\.txt$', '^art_regression_outliers_swrora.*\.mat$'}, @iscellstr)
 
 % 2nd level covariates
 p.addParameter('effects_file', '', @(x) iscellstr(x) || ischar(x))
@@ -141,12 +143,6 @@ for sbi = 1:Arg.nsubjects
                                 , fullfile(pi, Arg.dtdir), Arg.functional));
     end
 end
-% FIXME - IS NEEDED?? FUNC_FILE = cell(Arg.nsubjects, 1);
-% for sbi = 1:Arg.nsubjects
-%     pi = fullfile(names(sbi).folder, names(sbi).name);
-%     FUNC_FILE{sbi} = cellstr(spm_select('FPList'...
-%                             , fullfile(pi, Arg.dtdir), Arg.functional));
-% end
 
 % Selects mask / anatomical volumes
 if Arg.structural_sessionspecific
@@ -228,10 +224,6 @@ else
     batch.Setup.masks.White.files = WMM_FILE;
     batch.Setup.masks.CSF.files = CSFM_FILE;
 end
-% Define grey, white, & CSF mask dimensions
-batch.Setup.masks.Grey.dimensions = Arg.grey_dim;
-batch.Setup.masks.White.dimensions = Arg.white_dim;
-batch.Setup.masks.CSF.dimensions = Arg.csf_dim;
 
 
 %% Define conditions
@@ -332,7 +324,7 @@ end
 
 
 %% Setup preprocessing
-batch.Setup.preprocessing.steps = Arg.steps;
+% batch.Setup.preprocessing.steps = Arg.steps;
 
 
 %% Add other top-level fields of batch.Setup based on unmatched parameters
@@ -345,6 +337,8 @@ end
 %% Save batch if required
 if Arg.save 
     if isfield(batch, 'filename')
+        [pth, ~, ~] = fileparts(batch.filename);
+        if ~isfolder(pth), mkdir(pth); end
         save(batch.filename, 'batch')
     else
         error 'No save location defined in batch structure'

@@ -69,6 +69,7 @@ function batch = BN_conn_batch(names, outdir, varargin)
 % TODO : SHOULD WE REQUIRE A FIXED BIDS-LIKE DIRECTORY ORGANISATION?
 % TODO : CAN I DEFINE SEPARATE RESULTS FOLDERS FOR EACH RUN?
 % TODO : HOW TO SPECIFY/DICTATE THE STORAGE OF ROIs?
+% TODO : FIX DOCS OF PARAMS
 
 
 %% Initialise -----------------------------------
@@ -94,16 +95,7 @@ cnn_stgs = {'Denoising'
             'Results' 
             'vvResults' 
             'QA'};
-for i = 1:numel(cnn_stgs)
-    p.addParameter(cnn_stgs{i}, struct(), @isstruct)
-end
-% p.addParameter('Denoising', struct(), @isstruct)
-% p.addParameter('Analysis', struct(), @isstruct)
-% p.addParameter('dynAnalysis', struct(), @isstruct)
-% p.addParameter('vvAnalysis', struct(), @isstruct)
-% p.addParameter('Results', struct(), @isstruct)
-% p.addParameter('vvResults', struct(), @isstruct)
-% p.addParameter('QA', struct(), @isstruct)
+cellfun(@(x) p.addParameter(x, struct(), @isstruct), cnn_stgs)
 
 p.parse(names, outdir, varargin{:})
 Arg = p.Results;
