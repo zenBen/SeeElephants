@@ -34,7 +34,7 @@ function batch = CONN_Setup(names, batch, varargin)
 % TODO : MATCH BIDS SPECIFICATION IN FILE-FINDING DEFAULTS: REGEX, STD DIRS
 % TODO : nscans - typically found from functionals?
 % TODO : HANDLE importfile OPTION FOR CONN CONDITIONS FIELD!!
-% TODO : HANDLE SESSION SPECIFIC STRUCTURAL REGEXES
+% TODO : ARE PREPROCESSING PARAMETERS NEEDED?
 
 
 %% Initialise defaults
@@ -62,43 +62,46 @@ p.addParameter('structural', '^wrofLASA.*\.nii$', @(x) ischar(x) || iscellstr(x)
 p.addParameter('grey_rgx', '^wc1cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
 p.addParameter('white_rgx', '^wc2cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
 p.addParameter('csf_rgx', '^wc3cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
-% FIXME - REMOVE SCALAR PARAMS??
-% p.addParameter('grey_dim', 1, @isscalar)
-% p.addParameter('white_dim', 3, @isscalar)
-% p.addParameter('csf_dim', 3, @isscalar)
+p.addParameter('grey_dim', 1, @isnumeric)
+p.addParameter('white_dim', 1, @isnumeric)
+p.addParameter('csf_dim', 1, @isnumeric)
 
-% FIXME : ROIs - these are complex structures with embedded nifti - need
-%                another function to build them?
-% names         : rois.names{nroi} char array of ROI name [defaults to ROI filename]
-% files         : rois.files{nroi}{nsub}{nses} char array of roi file (rois.files{nroi}{nsub} char array of roi file, 
-%                 to use the same roi for all sessions; or rois.files{nroi} char array of roi file, to use the same 
-%                 roi for all subjects)
+% ROIs
+p.addParameter('roi_names', {''}, @(x) ischar(x) || iscellstr(x))
+p.addParameter('roi_files', {''}, @(x) ischar(x) || iscellstr(x))
 % dimensions    : rois.dimensions{nroi} number of ROI dimensions - # temporal components to extract from ROI [1] (set 
 %                 to 1 to extract the average timeseries within ROI voxels; set to a number greater than 1 to extract 
 %                 additional PCA timeseries within ROI voxels 
+p.addParameter('roi_dim', 1, @isnumeric)
+% FIXME : ARE ANY ROI PARAMS BELOW HERE NEEDED??
 % weighted      : rois.weighted(nroi) 1/0 to use weighted average/PCA computation when extracting temporal components 
 %                 from each ROI (BOLD signals are weighted by the ROI mask value at each voxel)
+p.addParameter('roi_weight', 1, @isnumeric)
 % multiplelabels: rois.multiplelabels(nroi) 1/0 to indicate roi file contains multiple labels/ROIs (default: set to 
 %                 1 if there exist an associated .txt or .xls file with the same filename and in the same folder as 
 %                 the roi file)
+p.addParameter('roi_multilabel', 1, @isnumeric)
 % mask          : rois.mask(nroi) 1/0 to mask with grey matter voxels [0] 
+p.addParameter('roi_mask', 0, @isnumeric)
 % regresscovariates: rois.regresscovariates(nroi) 1/0 to regress known first-level covariates before computing PCA 
 %                 decomposition of BOLD signal within ROI [1 if dimensions>1; 0 otherwise] 
+p.addParameter('roi_regresscovar', 1, @isnumeric)
 % dataset       : rois.dataset(nroi) index n to Secondary Dataset #n identifying the version of functional data 
 %                 coregistered  to this ROI to extract BOLD timeseries from [1] (set to 0 to extract BOLD signal 
 %                 from Primary Dataset instead; secondary datasets may be identified by their index or by their 
 %                 label -see 'functional_label' preprocessing step)
+p.addParameter('roi_dataset', 1, @isnumeric)
 
 % Experiment conditions
-p.addParameter('cond_names', {''}, @(x) iscellstr(x) || ischar(x)) %#ok<*ISCLSTR>
+p.addParameter('cond_names', {''}, @(x) iscellstr(x) || ischar(x))
 p.addParameter('cond_onset', 0, @isnumeric)
 p.addParameter('cond_dur', inf, @isnumeric)
 p.addParameter('cond_param', 0, @isnumeric)
 p.addParameter('cond_filter', [0.01 0.1], @(x) isnumeric(x) || iscell(x))
 
 % 1ST level covariates
-p.addParameter('covar_names', {'motion', 'outliers'}, @iscellstr)
-p.addParameter('covar_files', {'^rp_a.*\.txt$', '^art_regression_outliers_swrora.*\.mat$'}, @iscellstr)
+p.addParameter('covar_names', {'motion' 'outliers'}, @iscellstr)
+p.addParameter('covar_files', {'' ''}, @iscellstr)
 
 % 2nd level covariates
 p.addParameter('effects_file', '', @(x) iscellstr(x) || ischar(x))
@@ -106,7 +109,7 @@ p.addParameter('effect_names', {''}, @iscellstr)
 p.addParameter('effects', {zeros(size(names, 1), 1)}, @iscell)
 p.addParameter('effect_descrip', {}, @iscell)
 p.addParameter('groups_file', '', @(x) iscellstr(x) || ischar(x))
-p.addParameter('group_names', {''}, @iscellstr)
+p.addParameter('group_names', {''}, @iscellstr) %#ok<*ISCLSTR>
 p.addParameter('groups', {}, @iscell)
 p.addParameter('group_descrip', {}, @iscell)
 
@@ -150,17 +153,24 @@ if Arg.structural_sessionspecific
     GMM_FILE = cell(Arg.nsubjects, Arg.nsessions);
     WMM_FILE = cell(Arg.nsubjects, Arg.nsessions);
     CSFM_FILE = cell(Arg.nsubjects, Arg.nsessions);
+    
+    Arg.structural = one2many(Arg.structural, 1, Arg.nsessions);
+    Arg.grey_rgx = one2many(Arg.grey_rgx, 1, Arg.nsessions);
+    Arg.white_rgx = one2many(Arg.white_rgx, 1, Arg.nsessions);
+    Arg.csf_rgx = one2many(Arg.csf_rgx, 1, Arg.nsessions);
+    
+    % Find files
     for sbi = 1:Arg.nsubjects
         for ssi = 1:Arg.nsessions
-            pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name);
-            STRUC_FILE{sbi}{ssi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.structural));
-            GMM_FILE{sbi}{ssi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.grey_rgx));
-            WMM_FILE{sbi}{ssi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.white_rgx));
-            CSFM_FILE{sbi}{ssi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.csf_rgx));
+            pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name, Arg.T1dir);
+            STRUC_FILE{sbi}{ssi} =...
+                        cellstr(spm_select('FPList', pi, Arg.structural{ssi}));
+            GMM_FILE{sbi}{ssi} =...
+                        cellstr(spm_select('FPList', pi, Arg.grey_rgx{ssi}));
+            WMM_FILE{sbi}{ssi} =...
+                        cellstr(spm_select('FPList', pi, Arg.white_rgx{ssi}));
+            CSFM_FILE{sbi}{ssi} =...
+                        cellstr(spm_select('FPList', pi, Arg.csf_rgx{ssi}));
         end
     end
 else
@@ -169,19 +179,13 @@ else
     WMM_FILE = cell(Arg.nsubjects, 1);
     CSFM_FILE = cell(Arg.nsubjects, 1);
     for sbi = 1:Arg.nsubjects
-        pi = fullfile(names(sbi).folder, names(sbi).name);
-        STRUC_FILE{sbi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.structural));
-        GMM_FILE{sbi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.grey_rgx));
-        WMM_FILE{sbi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.white_rgx));
-        CSFM_FILE{sbi} = cellstr(spm_select('FPList'...
-                                , fullfile(pi, Arg.T1dir), Arg.csf_rgx));
+        pi = fullfile(names(sbi).folder, names(sbi).name, Arg.T1dir);
+        STRUC_FILE{sbi} = cellstr(spm_select('FPList', pi, Arg.structural));
+        GMM_FILE{sbi} = cellstr(spm_select('FPList', pi, Arg.grey_rgx));
+        WMM_FILE{sbi} = cellstr(spm_select('FPList', pi, Arg.white_rgx));
+        CSFM_FILE{sbi} = cellstr(spm_select('FPList', pi, Arg.csf_rgx));
     end
-
 end
-
 
 
 %% Create top-level batch.Setup fields
@@ -224,9 +228,71 @@ else
     batch.Setup.masks.White.files = WMM_FILE;
     batch.Setup.masks.CSF.files = CSFM_FILE;
 end
+% Define grey, white, & CSF mask dimensions
+Arg.grey_dim = one2many(Arg.grey_dim, size(GMM_FILE, 1), size(GMM_FILE, 2));
+Arg.white_dim = one2many(Arg.white_dim, size(WMM_FILE, 1), size(WMM_FILE, 2));
+Arg.csf_dim = one2many(Arg.csf_dim, size(CSFM_FILE, 1), size(CSFM_FILE, 2));
+batch.Setup.masks.Grey.dimensions = Arg.grey_dim;
+batch.Setup.masks.White.dimensions = Arg.white_dim;
+batch.Setup.masks.CSF.dimensions = Arg.csf_dim;
 
 
-%% Define conditions
+%% DEFINE ROIs
+if isempty(cell2mat(Arg.roi_files))
+    error 'ROI files must be defined - no defaults are possible'
+end
+nroi = size(Arg.roi_files, 1);
+for ri = 1:nroi
+    % ROI files per subject?
+    if size(Arg.roi_files, 2) == Arg.nsubjects
+        for sbi = 1:size(Arg.roi_files, 2)
+            
+            % ROI files per session?
+            if size(Arg.roi_files, 3) == Arg.nsessions
+                for ssi = 1:size(Arg.roi_files, 3)
+                    batch.Setup.rois.files{ri}{sbi}{ssi} =...
+                                                Arg.roi_files{ri}{sbi}{ssi};
+                end
+            else
+                batch.Setup.rois.files{ri}{sbi} = Arg.roi_files{ri}{sbi};
+            end
+        end
+    else
+        batch.Setup.rois.files{ri} = Arg.roi_files{ri};
+    end
+end
+
+% names : rois.names{nroi} char array of ROI name [defaults to ROI filename]
+if ~isempty(cell2mat(Arg.roi_names))
+    if numel(Arg.roi_names) ~= nroi
+        error('CONN_Setup:ROIs', 'Mismatch: %d ROI names vs %d ROI files'...
+            , numel(Arg.roi_names), nroi)
+    end
+    for ri = 1:nroi
+        batch.Setup.rois.names{ri} = Arg.roi_names{ri};
+    end
+end
+% dimensions    : rois.dimensions{nroi} number of ROI dimensions
+if isscalar(Arg.roi_dim)
+    Arg.roi_dim = repmat(Arg.roi_dim, 1, nroi); 
+end
+for ri = 1:nroi
+    batch.Setup.rois.dimensions{ri} = Arg.roi_dim(ri);
+end
+% weighted      : rois.weighted(nroi) 1/0 to use weighted avg/PCA computation
+batch.Setup.rois.weighted = one2many(Arg.roi_weight, 1, nroi);
+% multiplelabels: rois.multiplelabels(nroi) 1/0 roi file has multi labels/ROIs
+batch.Setup.rois.multiplelabels = one2many(Arg.roi_multilabel, 1, nroi);
+% mask          : rois.mask(nroi) 1/0 to mask with grey matter voxels [0]
+batch.Setup.rois.mask = one2many(Arg.roi_mask, 1, nroi);
+% regresscovariates: rois.regresscovariates(nroi) 1/0 to regress known first-level covariates before computing PCA 
+%                 decomposition of BOLD signal within ROI [1 if dimensions>1; 0 otherwise] 
+batch.Setup.rois.regresscovariates = one2many(Arg.roi_regresscovar, 1, nroi);
+% dataset       : rois.dataset(nroi) index n to Secondary Dataset
+batch.Setup.rois.dataset = one2many(Arg.roi_dataset, 1, nroi);
+
+
+%% DEFINE CONDITIONS
 if ischar(Arg.cond_names)
     Arg.cond_names = {Arg.cond_names};
 end
@@ -259,24 +325,25 @@ end
 
 %% Define 1st level covariates
 batch.Setup.covariates.names = Arg.covar_names;
+if isempty(cell2mat(Arg.covar_files))
+    error 'Covariate file-index regex must be defined: no defaults are known!'
+end
 if Arg.structural_sessionspecific
     for sbi = 1:Arg.nsubjects
         for covi = 1:numel(Arg.covar_names)
             for ssi = 1:Arg.nsessions
-                pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name);
-                batch.Setup.covariates.files{sbi}{covi}{ssi}{1} = cellstr(...
-                    spm_select(...
-                    'FPList', fullfile(pi, Arg.dtdir), Arg.covar_files{covi}));
+                pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name, Arg.dtdir);
+                batch.Setup.covariates.files{sbi}{covi}{ssi}{1} =...
+                    cellstr(spm_select('FPList', pi, Arg.covar_files{covi}));
             end
         end
     end
 else
     for sbi = 1:Arg.nsubjects
         for covi = 1:numel(Arg.covar_names)
-            pi = fullfile(names(sbi).folder, names(sbi).name);
-            batch.Setup.covariates.files{sbi}{covi}{1} = cellstr(...
-                spm_select(...
-                'FPList', fullfile(pi, Arg.dtdir), Arg.covar_files{covi}));
+            pi = fullfile(names(sbi).folder, names(sbi).name, Arg.dtdir);
+            batch.Setup.covariates.files{sbi}{covi}{1} =...
+                    cellstr(spm_select('FPList', pi, Arg.covar_files{covi}));
         end
     end
 end
@@ -344,5 +411,15 @@ if Arg.save
         error 'No save location defined in batch structure'
     end
 end
+
+    function mat = one2many(testi, r, c)
+        if ischar(testi)
+            mat = repmat({testi}, r, c);
+        elseif isscalar(testi)
+            mat = repmat(testi, r, c);
+        else
+            mat = testi;
+        end
+    end
 
 end

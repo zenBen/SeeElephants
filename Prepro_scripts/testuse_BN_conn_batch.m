@@ -1,6 +1,6 @@
 %% Define our CONN project on disk
-% conndir = '/media/bcowley/CBRU_NMM/TBI/CONN/BN_testi';
-conndir = '/home/local/bcowley/Benslab/project_METHODMAN/BN_CONN';
+conndir = '/media/bcowley/CBRU_NMM/TBI/CONN/';
+% conndir = '/home/local/bcowley/Benslab/project_METHODMAN/BN_CONN';
 cd(conndir)
 connprj = 'TBI_testi_1';
 
