@@ -71,7 +71,7 @@ g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', {'_2' '_3'})
 grp1 = [g_s1 g_s2];
 
 
-%% build datasets yourself - for the 2 group, 3 session data
+%% NOELIA - build datasets yourself - for the 2 group, 3 session data
 % filter by exact list of subjects, with session 1 and 2 as '_1', '_2'
 gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [1 2]);
 g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
