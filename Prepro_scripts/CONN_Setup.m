@@ -30,11 +30,12 @@ function batch = CONN_Setup(names, batch, varargin)
 %        "one or several additional functional datasets (e.g. vdm files for 
 %         susceptibility distorition, alternative functional files for ROI-
 %         level timeseries extraction, etc.", ALSO SESSION-SPECIFIC GM, WM, CSF
-% TODO : L1 COVARIATES - SPECIFY MORE GENERIC OR ELSE NULL DEFAULTS??
+% TODO : L1 COVARIATES - ANY MORE THAN MOTION AND OUTLIERS??
 % TODO : MATCH BIDS SPECIFICATION IN FILE-FINDING DEFAULTS: REGEX, STD DIRS
 % TODO : nscans - typically found from functionals?
 % TODO : HANDLE importfile OPTION FOR CONN CONDITIONS FIELD!!
 % TODO : ARE PREPROCESSING PARAMETERS NEEDED?
+% TODO : FIX ROI EXTRA PARAMETERS?
 
 
 %% Initialise defaults
@@ -45,11 +46,12 @@ p.addRequired('names', @isstruct)
 p.addRequired('batch', @isstruct)
 
 p.addParameter('save', true, @islogical)
+p.addParameter('new', 1, @isscalar)
 
 % Basic settings
-p.addParameter('RT', 1.5, @isscalar)
 p.addParameter('nsubjects', size(names, 1), @isscalar)
 p.addParameter('nsessions', size(names, 2), @isscalar)
+p.addParameter('RT', 1.5, @isscalar)
 
 % Data and anatomy directories to prepend regex in calls to spm_select()
 p.addParameter('dtdir', 'rs', @ischar)
@@ -105,12 +107,12 @@ p.addParameter('covar_files', {'' ''}, @iscellstr)
 
 % 2nd level covariates
 p.addParameter('effects_file', '', @(x) iscellstr(x) || ischar(x))
-p.addParameter('effect_names', {''}, @iscellstr)
-p.addParameter('effects', {zeros(size(names, 1), 1)}, @iscell)
+p.addParameter('effect_names', {''}, @iscellstr) %#ok<*ISCLSTR>
+p.addParameter('effects', {}, @iscell)
 p.addParameter('effect_descrip', {}, @iscell)
 p.addParameter('groups_file', '', @(x) iscellstr(x) || ischar(x))
-p.addParameter('group_names', {''}, @iscellstr) %#ok<*ISCLSTR>
-p.addParameter('groups', {}, @iscell)
+p.addParameter('group_names', {''}, @iscellstr)
+p.addParameter('groups', ones(size(names, 1), 1), @isnumeric)
 p.addParameter('group_descrip', {}, @iscell)
 
 % FIXME : Extra file-specification options
@@ -189,18 +191,11 @@ end
 
 
 %% Create top-level batch.Setup fields
-if isscalar(Arg.RT)
-    batch.Setup.RT = repmat(Arg.RT, 1, Arg.nsubjects);
-end
+batch.Setup.isnew = Arg.new;
 batch.Setup.nsubjects = Arg.nsubjects;
 batch.Setup.nsessions = Arg.nsessions;
+batch.Setup.RT = one2many(Arg.RT, 1, Arg.nsubjects);
 batch.Setup.structural_sessionspecific = Arg.structural_sessionspecific;
-
-% batch.Setup.reorient = Arg.reorient;
-% batch.Setup.analyses = Arg.analyses;
-% batch.Setup.voxelmask = Arg.voxelmask;
-% batch.Setup.voxelresolution = Arg.voxelresolution;
-% batch.Setup.outputfiles = Arg.outputfiles;
 
 
 %% GET FILES
@@ -241,6 +236,7 @@ batch.Setup.masks.CSF.dimensions = Arg.csf_dim;
 if isempty(cell2mat(Arg.roi_files))
     error 'ROI files must be defined - no defaults are possible'
 end
+Arg.roi_files = Arg.roi_files(:); %set in column order
 nroi = size(Arg.roi_files, 1);
 for ri = 1:nroi
     % ROI files per subject?
@@ -273,9 +269,7 @@ if ~isempty(cell2mat(Arg.roi_names))
     end
 end
 % dimensions    : rois.dimensions{nroi} number of ROI dimensions
-if isscalar(Arg.roi_dim)
-    Arg.roi_dim = repmat(Arg.roi_dim, 1, nroi); 
-end
+Arg.roi_dim = one2many(Arg.roi_dim, 1, nroi); 
 for ri = 1:nroi
     batch.Setup.rois.dimensions{ri} = Arg.roi_dim(ri);
 end
@@ -328,22 +322,13 @@ batch.Setup.covariates.names = Arg.covar_names;
 if isempty(cell2mat(Arg.covar_files))
     error 'Covariate file-index regex must be defined: no defaults are known!'
 end
-if Arg.structural_sessionspecific
+
+for covi = 1:numel(Arg.covar_names)
     for sbi = 1:Arg.nsubjects
-        for covi = 1:numel(Arg.covar_names)
-            for ssi = 1:Arg.nsessions
-                pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name, Arg.dtdir);
-                batch.Setup.covariates.files{sbi}{covi}{ssi}{1} =...
-                    cellstr(spm_select('FPList', pi, Arg.covar_files{covi}));
-            end
-        end
-    end
-else
-    for sbi = 1:Arg.nsubjects
-        for covi = 1:numel(Arg.covar_names)
-            pi = fullfile(names(sbi).folder, names(sbi).name, Arg.dtdir);
-            batch.Setup.covariates.files{sbi}{covi}{1} =...
-                    cellstr(spm_select('FPList', pi, Arg.covar_files{covi}));
+        for ssi = 1:Arg.nsessions
+            pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name, Arg.dtdir);
+            batch.Setup.covariates.files{covi}{sbi}{ssi} =...
+                cellstr(spm_select('FPList', pi, Arg.covar_files{covi}));
         end
     end
 end
@@ -355,6 +340,7 @@ for l2t = l2type
     l2file = Arg.([l2t{:} 's_file']);
     l2desc = [l2t{:} '_descrip'];
     l2name = [l2t{:} '_names'];
+    l2vals = [l2t{:} 's'];
     if ~isempty(l2file)
         if iscell(l2file)
             l2 = readtable(l2file{1}, 'ReadRowN', 1);
@@ -374,17 +360,21 @@ for l2t = l2type
         end
         batch.Setup.subjects.(l2name) = l2.Properties.VariableNames;
         for sbi = 1:size(l2, 1)
-            batch.Setup.subjects.([l2t{:} 's']){sbi} = table2cell(l2(sbi, :));
+            if strcmp(l2t, 'group')
+                batch.Setup.subjects.(l2vals)(sbi) = find(l2{sbi, :});
+            else
+                batch.Setup.subjects.(l2vals){sbi} = table2cell(l2(sbi, :));
+            end
         end
     else
         if ~isempty(Arg.(l2desc))
-            batch.Setup.subjects.(l2desc) = Arg.(l2desc);
+            batch.Setup.subjects.descrip = Arg.(l2desc);
         end
-        if ~isempty(Arg.(l2name))
+        if ~isempty(cell2mat(Arg.(l2name)))
             batch.Setup.subjects.(l2name) = Arg.(l2name);
         end
-        if ~isempty(Arg.([l2t{:} 's']))
-            batch.Setup.subjects.([l2t{:} 's']) = Arg.([l2t{:} 's']);
+        if ~isempty(Arg.(l2vals))
+            batch.Setup.subjects.(l2vals) = Arg.(l2vals);
         end
     end
 end

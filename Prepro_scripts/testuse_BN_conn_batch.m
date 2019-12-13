@@ -20,6 +20,9 @@ setup.cond_names = {'pre' 'post'};
 setup.structural = {'^wro.*\.nii$', '^wcoregro.*\.nii$'};
 setup.covar_files = {'^rp_a.*\.txt$', '^art_regression_outliers_swrora.*\.mat$'};
 
+tmp = dirflt(fullfile(conndir, 'data', 'ROI'), 'getdir', false);
+setup.roi_files = fullfile(tmp(1).folder, {tmp.name});
+
 denoise = struct(...
     'some_arg', {'some_value'});
 
@@ -43,6 +46,8 @@ BN_conn_batch(fullfile(conndir, 'data'), fullfile(conndir, 'Output')...
 
 
 %% build datasets yourself, all types of filtering supported
+% this section designed for test dataset with subjects 09 13 29 35,
+% session 1 as '_1' but session 2 as either '_2' or  '_3'
 crit = 1;
 switch crit
     case 1
@@ -51,7 +56,7 @@ switch crit
             , 'guard_str_match', false);
     case 2
         gbas = build_dataset(fullfile(conndir, 'data')...
-            , 'filt', '~ROI'...
+            , 'filt', {'~ROI' '~Output'}...
             , 'guard_str_match', false...
             , 'getfile', false);
     case 3
@@ -61,22 +66,38 @@ switch crit
             , 'filt', {'29' '35'});
 end
 
-g1s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
-g1s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', {'_2' '_3'});
-grp1 = [g1s1 g1s2];
+g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
+g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', {'_2' '_3'});
+grp1 = [g_s1 g_s2];
 
+
+%% build datasets yourself - for the 2 group, 3 session data
+% filter by exact list of subjects, with session 1 and 2 as '_1', '_2'
+gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [1 2]);
+g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
+g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
+grp1 = [g_s1 g_s2];
+% filter by exact list of subjects, with session 1 and 2 as '_2', '_3'
+gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [31 32]);
+g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
+g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_3');
+grp2 = [g_s1 g_s2];
+
+sbj = [grp1; grp2];
+% NOTE: THIS COULD OBVIOUSLY BE STREAMLINED, BUT THAT'S HOW IT IS FOR NOW
 
 
 %% build and run batch from given struct of files (here CONN name is default)
-BN_conn_batch(grp1, fullfile(conndir, 'Output'), 'Setup', setup)
+BN_conn_batch(sbj, fullfile(conndir, 'Output'), 'Setup', setup)
 
 % build batch from given struct of files, don't run (CONN name is default)
-BN_conn_batch(grp1, fullfile(conndir, 'Output')...
+BN_conn_batch(sbj, fullfile(conndir, 'Output')...
     , 'do_batch', false...
-    , 'Setup', setup)
+    , 'Setup', setup...
+    , 'Denoising', denoise)
 
 % build batch from given struct of files, don't run, open in GUI
-BN_conn_batch(grp1, fullfile(conndir, 'Output')...
+BN_conn_batch(sbj, fullfile(conndir, 'Output')...
     , 'do_batch', false...
     , 'GUI', true...
     , 'Setup', setup)

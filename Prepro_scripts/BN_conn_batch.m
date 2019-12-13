@@ -121,7 +121,7 @@ for i = 1:numel(Unmatch_names)
 end
 
 
-%% PREPARE & CONDUCT connectivity analyses
+%% PREPARE connectivity analyses
 if ~isempty(fieldnames(Arg.Setup)) % CONN Setup
     batch = CONN_Setup(names, batch, Arg.Setup); 
 end
@@ -135,16 +135,20 @@ for i = 1:numel(cnn_stgs)
 end
 
 
-%% CALL THE CONN BATCH ->
-if Arg.do_batch
-    conn_batch(batch);
+%% RUN CONN BATCH ->
+if Arg.do_batch %switch on processing steps
+    f = fieldnames(batch);
+    idx = ismember(f, ['Setup'; cnn_stgs]);
+    for i = find(idx), batch.(f{i}).done = 1; end
 end
+conn_batch(batch) %build and save CONN_x structure
 
 
 %% CONN GUI IF REQUESTED
 if Arg.GUI
+    conn
     conn('load', batch.filename)
-    conn gui_results
+    conn gui_setup
 end
 
 end % BN_conn_batch
