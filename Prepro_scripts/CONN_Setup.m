@@ -64,9 +64,9 @@ p.addParameter('structural', '^wrofLASA.*\.nii$', @(x) ischar(x) || iscellstr(x)
 p.addParameter('grey_rgx', '^wc1cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
 p.addParameter('white_rgx', '^wc2cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
 p.addParameter('csf_rgx', '^wc3cor.*\.nii$', @(x) ischar(x) || iscellstr(x))
-p.addParameter('grey_dim', 1, @isnumeric)
-p.addParameter('white_dim', 1, @isnumeric)
-p.addParameter('csf_dim', 1, @isnumeric)
+% p.addParameter('grey_dim', 1, @isnumeric)
+% p.addParameter('white_dim', 1, @isnumeric)
+% p.addParameter('csf_dim', 1, @isnumeric)
 
 % ROIs
 p.addParameter('roi_names', {''}, @(x) ischar(x) || iscellstr(x))
@@ -144,7 +144,7 @@ FUNC_FILE = cell(Arg.nsubjects, Arg.nsessions);
 for sbi = 1:Arg.nsubjects
     for ssi = 1:Arg.nsessions
         pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name);
-        FUNC_FILE{sbi}{ssi} = cellstr(spm_select('FPList'...
+        FUNC_FILE{sbi, ssi} = cellstr(spm_select('FPList'...
                                 , fullfile(pi, Arg.dtdir), Arg.functional));
     end
 end
@@ -155,23 +155,24 @@ if Arg.structural_sessionspecific
     GMM_FILE = cell(Arg.nsubjects, Arg.nsessions);
     WMM_FILE = cell(Arg.nsubjects, Arg.nsessions);
     CSFM_FILE = cell(Arg.nsubjects, Arg.nsessions);
-    
+
     Arg.structural = one2many(Arg.structural, 1, Arg.nsessions);
     Arg.grey_rgx = one2many(Arg.grey_rgx, 1, Arg.nsessions);
     Arg.white_rgx = one2many(Arg.white_rgx, 1, Arg.nsessions);
     Arg.csf_rgx = one2many(Arg.csf_rgx, 1, Arg.nsessions);
-    
+
     % Find files
     for sbi = 1:Arg.nsubjects
         for ssi = 1:Arg.nsessions
-            pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name, Arg.T1dir);
-            STRUC_FILE{sbi}{ssi} =...
+            pi = fullfile(...
+                names(sbi, ssi).folder, names(sbi, ssi).name, Arg.T1dir);
+            STRUC_FILE{sbi, ssi} =...
                         cellstr(spm_select('FPList', pi, Arg.structural{ssi}));
-            GMM_FILE{sbi}{ssi} =...
+            GMM_FILE{sbi, ssi} =...
                         cellstr(spm_select('FPList', pi, Arg.grey_rgx{ssi}));
-            WMM_FILE{sbi}{ssi} =...
+            WMM_FILE{sbi, ssi} =...
                         cellstr(spm_select('FPList', pi, Arg.white_rgx{ssi}));
-            CSFM_FILE{sbi}{ssi} =...
+            CSFM_FILE{sbi, ssi} =...
                         cellstr(spm_select('FPList', pi, Arg.csf_rgx{ssi}));
         end
     end
@@ -202,7 +203,7 @@ batch.Setup.structural_sessionspecific = Arg.structural_sessionspecific;
 % Define functional files (as found above)
 for sbi = 1:Arg.nsubjects
     for ssi = 1:Arg.nsessions
-        batch.Setup.functionals{sbi}{ssi} = FUNC_FILE{sbi}{ssi};
+        batch.Setup.functionals{sbi}{ssi} = FUNC_FILE{sbi, ssi};
     end
 end
 
@@ -211,10 +212,10 @@ end
 if Arg.structural_sessionspecific
     for sbi = 1:Arg.nsubjects
         for ssi = 1:Arg.nsessions
-            batch.Setup.structurals{sbi}{ssi} = STRUC_FILE{sbi}{ssi};
-            batch.Setup.masks.Grey.files{sbi}{ssi} = GMM_FILE{sbi}{ssi};
-            batch.Setup.masks.White.files{sbi}{ssi} = WMM_FILE{sbi}{ssi};
-            batch.Setup.masks.CSF.files{sbi}{ssi} = CSFM_FILE{sbi}{ssi};
+            batch.Setup.structurals{sbi}{ssi} = STRUC_FILE{sbi, ssi};
+            batch.Setup.masks.Grey.files{sbi}{ssi} = GMM_FILE{sbi, ssi};
+            batch.Setup.masks.White.files{sbi}{ssi} = WMM_FILE{sbi, ssi};
+            batch.Setup.masks.CSF.files{sbi}{ssi} = CSFM_FILE{sbi, ssi};
         end
     end
 else
@@ -223,28 +224,28 @@ else
     batch.Setup.masks.White.files = WMM_FILE;
     batch.Setup.masks.CSF.files = CSFM_FILE;
 end
+
 % Define grey, white, & CSF mask dimensions
-Arg.grey_dim = one2many(Arg.grey_dim, size(GMM_FILE, 1), size(GMM_FILE, 2));
-Arg.white_dim = one2many(Arg.white_dim, size(WMM_FILE, 1), size(WMM_FILE, 2));
-Arg.csf_dim = one2many(Arg.csf_dim, size(CSFM_FILE, 1), size(CSFM_FILE, 2));
-batch.Setup.masks.Grey.dimensions = Arg.grey_dim;
-batch.Setup.masks.White.dimensions = Arg.white_dim;
-batch.Setup.masks.CSF.dimensions = Arg.csf_dim;
+% Arg.grey_dim = one2many(Arg.grey_dim, Arg.nsubjects, Arg.nsessions);
+% Arg.white_dim = one2many(Arg.white_dim, Arg.nsubjects, Arg.nsessions);
+% Arg.csf_dim = one2many(Arg.csf_dim, Arg.nsubjects, Arg.nsessions);
+% batch.Setup.masks.Grey.dimensions = Arg.grey_dim;
+% batch.Setup.masks.White.dimensions = Arg.white_dim;
+% batch.Setup.masks.CSF.dimensions = Arg.csf_dim;
 
 
 %% DEFINE ROIs
-if isempty(cell2mat(Arg.roi_files))
+if ~any(strlength(Arg.roi_files))
     error 'ROI files must be defined - no defaults are possible'
 end
 Arg.roi_files = Arg.roi_files(:); %set in column order
 nroi = size(Arg.roi_files, 1);
 for ri = 1:nroi
-    % ROI files per subject?
-    if size(Arg.roi_files, 2) == Arg.nsubjects
+
+    if size(Arg.roi_files, 2) == Arg.nsubjects    % ROI files per subject?
         for sbi = 1:size(Arg.roi_files, 2)
             
-            % ROI files per session?
-            if size(Arg.roi_files, 3) == Arg.nsessions
+            if size(Arg.roi_files, 3) == Arg.nsessions % ROI files per session?
                 for ssi = 1:size(Arg.roi_files, 3)
                     batch.Setup.rois.files{ri}{sbi}{ssi} =...
                                                 Arg.roi_files{ri}{sbi}{ssi};
@@ -259,7 +260,7 @@ for ri = 1:nroi
 end
 
 % names : rois.names{nroi} char array of ROI name [defaults to ROI filename]
-if ~isempty(cell2mat(Arg.roi_names))
+if any(strlength(Arg.roi_names))
     if numel(Arg.roi_names) ~= nroi
         error('CONN_Setup:ROIs', 'Mismatch: %d ROI names vs %d ROI files'...
             , numel(Arg.roi_names), nroi)
@@ -290,7 +291,7 @@ batch.Setup.rois.dataset = one2many(Arg.roi_dataset, 1, nroi);
 if ischar(Arg.cond_names)
     Arg.cond_names = {Arg.cond_names};
 end
-if isempty(cell2mat(Arg.cond_names))
+if ~any(strlength(Arg.cond_names))
     error 'Condition names must be defined: no defaults are possible'
 end
 nconditions = numel(Arg.cond_names);
@@ -319,15 +320,26 @@ end
 
 %% Define 1st level covariates
 batch.Setup.covariates.names = Arg.covar_names;
-if isempty(cell2mat(Arg.covar_files))
+if ~any(strlength(Arg.covar_files))
     error 'Covariate file-index regex must be defined: no defaults are known!'
 end
-
-for covi = 1:numel(Arg.covar_names)
-    for sbi = 1:Arg.nsubjects
-        for ssi = 1:Arg.nsessions
-            pi = fullfile(names(sbi, ssi).folder, names(sbi, ssi).name, Arg.dtdir);
-            batch.Setup.covariates.files{covi}{sbi}{ssi} =...
+    
+if Arg.structural_sessionspecific
+    for covi = 1:numel(Arg.covar_names)
+        for sbi = 1:Arg.nsubjects
+            for ssi = 1:Arg.nsessions
+                pi = fullfile(...
+                    names(sbi, ssi).folder, names(sbi, ssi).name, Arg.dtdir);
+                batch.Setup.covariates.files{covi}{sbi}{ssi} = cellstr(...
+                    spm_select('FPList', pi, Arg.covar_files{covi, ssi}));
+            end
+        end
+    end
+else
+    for covi = 1:numel(Arg.covar_names)
+        for sbi = 1:Arg.nsubjects
+            pi = fullfile(names(sbi).folder, names(sbi).name, Arg.dtdir);
+            batch.Setup.covariates.files{covi}{sbi}{1} =...
                 cellstr(spm_select('FPList', pi, Arg.covar_files{covi}));
         end
     end
@@ -370,7 +382,7 @@ for l2t = l2type
         if ~isempty(Arg.(l2desc))
             batch.Setup.subjects.descrip = Arg.(l2desc);
         end
-        if ~isempty(cell2mat(Arg.(l2name)))
+        if any(strlength(Arg.(l2name)))
             batch.Setup.subjects.(l2name) = Arg.(l2name);
         end
         if ~isempty(Arg.(l2vals))

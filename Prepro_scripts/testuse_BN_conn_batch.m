@@ -17,8 +17,12 @@ setup = struct('functional', '^swrora.*\.nii$'...
             , 'structural_sessionspecific', true...
             , 'groups_file', {fullfile(conndir, 'data', 'groups.csv')});
 setup.cond_names = {'pre' 'post'};
-setup.structural = {'^wro.*\.nii$', '^wcoregro.*\.nii$'};
-setup.covar_files = {'^rp_a.*\.txt$', '^art_regression_outliers_swrora.*\.mat$'};
+setup.structural = {'^wro.*\.nii$' '^wcoregro.*\.nii$'};
+setup.covar_files = {'^rp_a.*\.txt$' '^art_regression_outliers_swrora.*\.mat$';
+                    '^rp_a.*\.txt$' '^art_regression_outliers_and_mov.*\.mat$'};
+setup.grey_rgx = {'^wc1ro.*\.nii$' '^wc1cor.*\.nii$'};
+setup.white_rgx = {'^wc2ro.*\.nii$' '^wc2cor.*\.nii$'};
+setup.csf_rgx = {'^wc3ro.*\.nii$' '^wc3cor.*\.nii$'};
 
 tmp = dirflt(fullfile(conndir, 'data', 'ROI'), 'getdir', false);
 setup.roi_files = fullfile(tmp(1).folder, {tmp.name});
@@ -28,6 +32,38 @@ denoise = struct(...
 
 level1 = struct(...
     'some_arg', 'some_other_value');
+
+
+%% NOELIA - build datasets yourself - for the 2 group, 3 session data
+% filter by exact list of subjects, with session 1 and 2 as '_1', '_2'
+gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [1 2]);
+g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
+g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
+grp1 = [g_s1 g_s2];
+% filter by exact list of subjects, with session 1 and 2 as '_1', '_3'
+gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [31 32]);
+g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
+g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_3');
+grp2 = [g_s1 g_s2];
+
+sbj = [grp1; grp2];
+% NOTE: THIS COULD OBVIOUSLY BE STREAMLINED, BUT THAT'S HOW IT IS FOR NOW
+
+
+%% build and run batch from given struct of files (here CONN name is default)
+batch = BN_conn_batch(sbj, fullfile(conndir, 'Output'), 'Setup', setup);
+
+% build batch from given struct of files, don't run (CONN name is default)
+batch = BN_conn_batch(sbj, fullfile(conndir, 'Output')...
+    , 'do_batch', false...
+    , 'Setup', setup...
+    , 'Denoising', denoise);
+
+% build batch from given struct of files, don't run, open in GUI
+batch = BN_conn_batch(sbj, fullfile(conndir, 'Output')...
+    , 'do_batch', false...
+    , 'GUI', true...
+    , 'Setup', setup);
 
 
 %% Find data and CONN batch it
@@ -69,35 +105,3 @@ end
 g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
 g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', {'_2' '_3'});
 grp1 = [g_s1 g_s2];
-
-
-%% NOELIA - build datasets yourself - for the 2 group, 3 session data
-% filter by exact list of subjects, with session 1 and 2 as '_1', '_2'
-gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [1 2]);
-g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
-g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
-grp1 = [g_s1 g_s2];
-% filter by exact list of subjects, with session 1 and 2 as '_2', '_3'
-gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [31 32]);
-g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
-g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_3');
-grp2 = [g_s1 g_s2];
-
-sbj = [grp1; grp2];
-% NOTE: THIS COULD OBVIOUSLY BE STREAMLINED, BUT THAT'S HOW IT IS FOR NOW
-
-
-%% build and run batch from given struct of files (here CONN name is default)
-BN_conn_batch(sbj, fullfile(conndir, 'Output'), 'Setup', setup)
-
-% build batch from given struct of files, don't run (CONN name is default)
-BN_conn_batch(sbj, fullfile(conndir, 'Output')...
-    , 'do_batch', false...
-    , 'Setup', setup...
-    , 'Denoising', denoise)
-
-% build batch from given struct of files, don't run, open in GUI
-BN_conn_batch(sbj, fullfile(conndir, 'Output')...
-    , 'do_batch', false...
-    , 'GUI', true...
-    , 'Setup', setup)
