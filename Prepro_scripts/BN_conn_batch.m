@@ -26,7 +26,7 @@ function batch = BN_conn_batch(names, outdir, varargin)
 %
 % varargin:
 %   filename    string, name of the conn output file,
-%               default = fullfile(outdir, "conn_batch_DDMMYYYYHHMMSS.mat")
+%               default = "conn_batch_DDMMYYYYHHMMSS.mat"
 % 
 %   do_batch    logical, run conn_batch() on batch struct, default = true
 %   prompt      logical, prompt for path to data files, default = false
@@ -80,8 +80,7 @@ p.KeepUnmatched = true;
 p.addRequired('names', @(x) isstruct(x) || ischar(x) || iscellstr(x))
 p.addRequired('outdir', @ischar)
 
-p.addParameter('filename'...
-    , fullfile(outdir, ['conn_batch_' datestr(now, 30) '.mat']), @ischar)
+p.addParameter('filename', ['conn_batch_' datestr(now, 30) '.mat'], @ischar)
 
 p.addParameter('do_batch', true, @islogical)
 p.addParameter('prompt', false, @islogical)
@@ -112,7 +111,7 @@ end
 
 %% Create batch
 [~, batch.name, ~] = fileparts(Arg.filename);
-batch.filename = Arg.filename;
+batch.filename = fullfile(outdir, Arg.filename);
 batch.gui = Arg.GUI;
 % Add other top-level fields of batch based on unmatched parameters
 Unmatch_names = fieldnames(p.Unmatched);

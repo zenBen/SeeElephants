@@ -15,7 +15,7 @@ SPM_prepro_wrapper(rawdat, conndir, {'rea' 'reo' 'nor' 'smo'})
 setup = struct('functional', '^swrora.*\.nii$'...
             , 'T1dir', 'T1_rs'...
             , 'structural_sessionspecific', true...
-            , 'groups_file', {fullfile(conndir, 'data', 'groups.csv')});
+            , 'groups_file', fullfile(conndir, 'data', 'groups.csv'));
 setup.cond_names = {'pre' 'post'};
 setup.structural = {'^wro.*\.nii$' '^wcoregro.*\.nii$'};
 setup.covar_files = {'^rp_a.*\.txt$' '^art_regression_outliers_swrora.*\.mat$';
@@ -23,6 +23,7 @@ setup.covar_files = {'^rp_a.*\.txt$' '^art_regression_outliers_swrora.*\.mat$';
 setup.grey_rgx = {'^wc1ro.*\.nii$' '^wc1cor.*\.nii$'};
 setup.white_rgx = {'^wc2ro.*\.nii$' '^wc2cor.*\.nii$'};
 setup.csf_rgx = {'^wc3ro.*\.nii$' '^wc3cor.*\.nii$'};
+setup.effects_file = fullfile(conndir, 'data', {'effects1.csv' 'effects2.csv'});
 
 tmp = dirflt(fullfile(conndir, 'data', 'ROI'), 'getdir', false);
 setup.roi_files = fullfile(tmp(1).folder, {tmp.name});
@@ -36,12 +37,12 @@ level1 = struct(...
 
 %% NOELIA - build datasets yourself - for the 2 group, 3 session data
 % filter by exact list of subjects, with session 1 and 2 as '_1', '_2'
-gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [1 2]);
+gbas = build_dataset(fullfile(conndir, 'data'), 'getfile', 0, 'filt', [1 2]);
 g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
 g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
 grp1 = [g_s1 g_s2];
 % filter by exact list of subjects, with session 1 and 2 as '_1', '_3'
-gbas = build_dataset(fullfile(conndir, 'data'), 'filt', [31 32]);
+gbas = build_dataset(fullfile(conndir, 'data'), 'getfile', 0, 'filt', [31 32]);
 g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
 g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_3');
 grp2 = [g_s1 g_s2];

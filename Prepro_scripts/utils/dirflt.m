@@ -7,8 +7,8 @@ p.KeepUnmatched = true;
 
 p.addRequired('indir', @isstr);
 
-p.addParameter('getdir', true, @islogical);
-p.addParameter('getfile', true, @islogical);
+p.addParameter('getdir', true, @(x) islogical(x) || ismember(x,[0 1]));
+p.addParameter('getfile', true, @(x) islogical(x) || ismember(x,[0 1]));
 
 p.parse(indir, varargin{:});
 Arg = p.Results;

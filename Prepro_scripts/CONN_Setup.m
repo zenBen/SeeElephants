@@ -296,18 +296,8 @@ if ~any(strlength(Arg.cond_names))
 end
 nconditions = numel(Arg.cond_names);
 batch.Setup.conditions.names = Arg.cond_names;
-if isscalar(Arg.cond_onset)
-    Arg.cond_onset = repmat(Arg.cond_onset, 1, nconditions);
-end
-if isscalar(Arg.cond_dur)
-    Arg.cond_dur = repmat(Arg.cond_dur, 1, nconditions);
-end
-if isscalar(Arg.cond_param)
-    Arg.cond_param = repmat(Arg.cond_param, 1, nconditions);
-end
-if ~iscell(Arg.cond_filter) || isscalar(Arg.cond_filter)
-    Arg.cond_filter = repmat({Arg.cond_filter}, 1, nconditions);
-end
+Arg.cond_onset = one2many(Arg.cond_onset, 1, nconditions);
+Arg.cond_dur = one2many(Arg.cond_dur, 1, nconditions);
 for ci = 1:nconditions
     for sbi = 1:Arg.nsubjects
         for ssi = 1:Arg.nsessions
@@ -316,6 +306,11 @@ for ci = 1:nconditions
         end
     end
 end
+batch.Setup.conditions.param = one2many(Arg.cond_param, 1, nconditions);
+if ~iscell(Arg.cond_filter) || isscalar(Arg.cond_filter)
+    Arg.cond_filter = repmat({Arg.cond_filter}, 1, nconditions);
+end
+batch.Setup.conditions.filter = Arg.cond_filter;
 
 
 %% Define 1st level covariates
