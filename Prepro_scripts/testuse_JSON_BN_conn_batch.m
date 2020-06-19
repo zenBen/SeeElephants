@@ -1,8 +1,12 @@
+%% BUILD AND RUN CONN BATCH FROM JSON SPEC
+% TODO - READ JSON
+
+
 %% Define our CONN project on disk
 conndir = '/media/bcowley/CBRU_NMM/TBI/CONN/';
 % conndir = '/home/local/bcowley/Benslab/project_METHODMAN/BN_CONN';
 cd(conndir)
-connprj = 'TBI_testi_1';
+connprj = 'TBI_testi_2';
 
 
 % Find data and SPM preprocess - THIS IS JUST AN EXAMPLE

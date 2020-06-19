@@ -155,56 +155,56 @@ batch.Setup.structural_sessionspecific = Arg.structural_sessionspecific;
 
 
 %% DEFINE ROIs
-if ~any(strlength(Arg.roi_files))
-    error 'ROI files must be defined - no defaults are possible'
-end
-Arg.roi_files = Arg.roi_files(:); %set in column order
-nroi = size(Arg.roi_files, 1);
-for ri = 1:nroi
-
-    if size(Arg.roi_files, 2) == Arg.nsubjects    % ROI files per subject?
-        for sbi = 1:size(Arg.roi_files, 2)
-            
-            if size(Arg.roi_files, 3) == Arg.nsessions % ROI files per session?
-                for ssi = 1:size(Arg.roi_files, 3)
-                    batch.Setup.rois.files{ri}{sbi}{ssi} =...
-                                                Arg.roi_files{ri}{sbi}{ssi};
-                end
-            else
-                batch.Setup.rois.files{ri}{sbi} = Arg.roi_files{ri}{sbi};
-            end
-        end
-    else
-        batch.Setup.rois.files{ri} = Arg.roi_files{ri};
-    end
-end
-
-% names : rois.names{nroi} char array of ROI name [defaults to ROI filename]
-if any(strlength(Arg.roi_names))
-    if numel(Arg.roi_names) ~= nroi
-        error('CONN_Setup:ROIs', 'Mismatch: %d ROI names vs %d ROI files'...
-            , numel(Arg.roi_names), nroi)
-    end
+if any(strlength(Arg.roi_files))
+%     error 'ROI files must be defined - no defaults are possible'
+    Arg.roi_files = Arg.roi_files(:); %set in column order
+    nroi = size(Arg.roi_files, 1);
     for ri = 1:nroi
-        batch.Setup.rois.names{ri} = Arg.roi_names{ri};
+
+        if size(Arg.roi_files, 2) == Arg.nsubjects    % ROI files per subject?
+            for sbi = 1:size(Arg.roi_files, 2)
+
+                if size(Arg.roi_files, 3) == Arg.nsessions % ROI files per session?
+                    for ssi = 1:size(Arg.roi_files, 3)
+                        batch.Setup.rois.files{ri}{sbi}{ssi} =...
+                                                    Arg.roi_files{ri}{sbi}{ssi};
+                    end
+                else
+                    batch.Setup.rois.files{ri}{sbi} = Arg.roi_files{ri}{sbi};
+                end
+            end
+        else
+            batch.Setup.rois.files{ri} = Arg.roi_files{ri};
+        end
     end
+
+    % names : rois.names{nroi} char array of ROI name [defaults to ROI filename]
+    if any(strlength(Arg.roi_names))
+        if numel(Arg.roi_names) ~= nroi
+            error('CONN_Setup:ROIs', 'Mismatch: %d ROI names vs %d ROI files'...
+                , numel(Arg.roi_names), nroi)
+        end
+        for ri = 1:nroi
+            batch.Setup.rois.names{ri} = Arg.roi_names{ri};
+        end
+    end
+    % dimensions    : rois.dimensions{nroi} number of ROI dimensions
+    Arg.roi_dim = one2many(Arg.roi_dim, 1, nroi); 
+    for ri = 1:nroi
+        batch.Setup.rois.dimensions{ri} = Arg.roi_dim(ri);
+    end
+    % weighted      : rois.weighted(nroi) 1/0 to use weighted avg/PCA computation
+    batch.Setup.rois.weighted = one2many(Arg.roi_weight, 1, nroi);
+    % multiplelabels: rois.multiplelabels(nroi) 1/0 roi file has multi labels/ROIs
+    batch.Setup.rois.multiplelabels = one2many(Arg.roi_multilabel, 1, nroi);
+    % mask          : rois.mask(nroi) 1/0 to mask with grey matter voxels [0]
+    batch.Setup.rois.mask = one2many(Arg.roi_mask, 1, nroi);
+    % regresscovariates: rois.regresscovariates(nroi) 1/0 to regress known first-level covariates before computing PCA 
+    %                 decomposition of BOLD signal within ROI [1 if dimensions>1; 0 otherwise] 
+    batch.Setup.rois.regresscovariates = one2many(Arg.roi_regresscovar, 1, nroi);
+    % dataset       : rois.dataset(nroi) index n to Secondary Dataset
+    batch.Setup.rois.dataset = one2many(Arg.roi_dataset, 1, nroi);
 end
-% dimensions    : rois.dimensions{nroi} number of ROI dimensions
-Arg.roi_dim = one2many(Arg.roi_dim, 1, nroi); 
-for ri = 1:nroi
-    batch.Setup.rois.dimensions{ri} = Arg.roi_dim(ri);
-end
-% weighted      : rois.weighted(nroi) 1/0 to use weighted avg/PCA computation
-batch.Setup.rois.weighted = one2many(Arg.roi_weight, 1, nroi);
-% multiplelabels: rois.multiplelabels(nroi) 1/0 roi file has multi labels/ROIs
-batch.Setup.rois.multiplelabels = one2many(Arg.roi_multilabel, 1, nroi);
-% mask          : rois.mask(nroi) 1/0 to mask with grey matter voxels [0]
-batch.Setup.rois.mask = one2many(Arg.roi_mask, 1, nroi);
-% regresscovariates: rois.regresscovariates(nroi) 1/0 to regress known first-level covariates before computing PCA 
-%                 decomposition of BOLD signal within ROI [1 if dimensions>1; 0 otherwise] 
-batch.Setup.rois.regresscovariates = one2many(Arg.roi_regresscovar, 1, nroi);
-% dataset       : rois.dataset(nroi) index n to Secondary Dataset
-batch.Setup.rois.dataset = one2many(Arg.roi_dataset, 1, nroi);
 
 
 %% DEFINE CONDITIONS
@@ -298,10 +298,10 @@ for l2t = l2type
         % assign L2 covariate descriptions (and cut from table)
         dsci = ismember(lower(l2.Properties.RowNames), 'description');
         if any(dsci)
-            batch.Setup.subjects.descrip(end+1:end+n) = l2{dsci, :};
+            batch.Setup.subjects.(l2desc)(end+1:end+n) = l2{dsci, :};
             l2(dsci, :) = [];
         else
-            batch.Setup.subjects.descrip(end+1:end+n) = cell(1, n);
+            batch.Setup.subjects.(l2desc)(end+1:end+n) = cell(1, n);
         end
         for sbi = 1:size(l2, 1)
             if strcmp(l2t, 'group')
@@ -320,9 +320,9 @@ for l2t = l2type
             batch.Setup.subjects.(l2vals) = Arg.(l2vals);
         end
         if ~isempty(Arg.(l2desc))
-            batch.Setup.subjects.descrip{end+1:end+n} = Arg.(l2desc);
+            batch.Setup.subjects.(l2desc){end+1:end+n} = Arg.(l2desc);
         else
-            batch.Setup.subjects.descrip(end+1:end+n) = cell(1, n);
+            batch.Setup.subjects.(l2desc)(end+1:end+n) = cell(1, n);
         end
     end
 end
@@ -363,6 +363,11 @@ function F = sbf_get_structurals(rgx)
                     ps = fullfile(...
                       names(sb, sn).folder, names(sb, sn).name, Arg.T1dir);
                     F{sb, sn} = cellstr(spm_select('FPList', ps, rgx{g, sn}));
+                    if isempty(F{sb, sn})
+                        warning('CONN_Setup:no_file_found'...
+                            , 'No %s file for sbj %s: Check structural & group specs'...
+                            , rgx{sn}, names(sb, sn).name)
+                    end
                 end
             end
         else
@@ -373,6 +378,11 @@ function F = sbf_get_structurals(rgx)
                     ps = fullfile(...
                       names(sb, sn).folder, names(sb, sn).name, Arg.T1dir);
                     F{sb, sn} = cellstr(spm_select('FPList', ps, rgx{sn}));
+                    if isempty(F{sb, sn})
+                        warning('CONN_Setup:no_file_found'...
+                            , 'No %s file for sbj %s: Check structural spec'...
+                            , rgx{sn}, names(sb, sn).name)
+                    end
                 end
             end
         end

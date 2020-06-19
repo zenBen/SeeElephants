@@ -70,6 +70,7 @@ function batch = BN_conn_batch(names, outdir, varargin)
 % TODO : CAN I DEFINE SEPARATE RESULTS FOLDERS FOR EACH RUN?
 % TODO : HOW TO SPECIFY/DICTATE THE STORAGE OF ROIs?
 % TODO : FIX DOCS OF PARAMS
+% TODO : FIND REGEX PARAMS THAT CONSTRAIN TO MATCH START OF FILENAMES
 
 
 %% Initialise -----------------------------------

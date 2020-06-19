@@ -1,4 +1,4 @@
-function batch = CONN_Denoising(batch, varargin)
+ function batch = CONN_Denoising(batch, varargin)
 %% CONN_DENOISE function used to set confound names and values
 % 
 % Varargin
