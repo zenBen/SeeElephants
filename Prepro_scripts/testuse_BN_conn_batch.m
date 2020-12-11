@@ -1,9 +1,9 @@
 %% Define our CONN project on disk
-conndir = '/media/bcowley/CBRU_NMM/TBI/CONN/';
-% conndir = '/home/local/bcowley/Benslab/project_METHODMAN/BN_CONN';
+% conndir = '/media/bcowley/CBRU_NMM/TBI/CONN/';
+conndir = '/home/local/bcowley/Benslab/METHODMAN/project_BN_CONN/';
 cd(conndir)
 connprj = 'TBI_testi_1';
-
+datadir = 'testdata';
 
 % Find data and SPM preprocess - THIS IS JUST AN EXAMPLE
 % rawdir = '~/some/input/data';
@@ -26,10 +26,10 @@ setup.white_rgx = {'^wc2ro.*\.nii$' '^wc2cor.*\.nii$';
                    '^wc2cor.*\.nii$' '^wc2cor.*\.nii$'};
 setup.csf_rgx = {'^wc3ro.*\.nii$' '^wc3cor.*\.nii$';
                  '^wc3cor.*\.nii$' '^wc3cor.*\.nii$'};
-setup.groups_file = fullfile(conndir, 'data', 'groups.csv');
+setup.groups_file = fullfile(conndir, datadir, 'groups.csv');
 % setup.effects_file = fullfile(conndir, 'data', {'effects1.csv' 'effects2.csv'});
 
-tmp = dirflt(fullfile(conndir, 'data', 'ROI'), 'getdir', false);
+tmp = dirflt(fullfile(conndir, datadir, 'ROI'), 'getdir', false);
 setup.roi_files = fullfile(tmp(1).folder, {tmp.name});
 setup.roi_names = {'testi1' 'testi2'};
 setup.roi_mask = [1 1];
@@ -46,13 +46,13 @@ level1 = struct(...
 
 %% NOELIA - build datasets yourself - for the 2 group, 3 session data
 % filter by exact list of subjects, with session 1 and 2 as '_1', '_2'
-gbas = build_dataset(fullfile(conndir, 'data'), 'getfile', 0, 'filt', [1 2]);
+gbas = build_dataset(fullfile(conndir, datadir), 'getfile', false, 'filt', [13 29]);
 g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
 g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
 grp1 = [g_s1 g_s2];
-% filter by exact list of subjects, with session 1 and 2 as '_1', '_3'
-gbas = build_dataset(fullfile(conndir, 'data'), 'getfile', 0, 'filt', [31 32]);
-g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_2');
+%% filter by exact list of subjects, with session 1 and 2 as '_1', '_3'
+gbas = build_dataset(fullfile(conndir, datadir), 'getfile', false, 'filt', [9 35]);
+g_s1 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_1');
 g_s2 = build_dataset(fullfile(gbas(1).folder, {gbas.name}), 'filt', '_3');
 grp2 = [g_s1 g_s2];
 
