@@ -21,8 +21,8 @@ p.addParameter('save', true, @islogical)
 p.addParameter('confoundname', {'Grey Matter' 'White Matter', 'CSF'}, @iscellstr)
 p.addParameter('confounddim', {3, 3, 6}, @(x) iscell(x) || isnumeric(x))
 p.addParameter('confoundderiv', {0, 0, 1}, @(x) iscell(x) || isnumeric(x))
-p.addParameter('confoundpower', {1, 1, 1}, @(x) iscell(x) || isnumeric(x))
-p.addParameter('confoundfilt', {0, 0, 0}, @(x) iscell(x) || isnumeric(x))
+p.addParameter('confoundpower', 1, @(x) iscell(x) || isnumeric(x))
+p.addParameter('confoundfilt', 0, @(x) iscell(x) || isnumeric(x))
 
 p.parse(batch, varargin{:});
 Arg = p.Results;
