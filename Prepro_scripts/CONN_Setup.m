@@ -26,6 +26,9 @@ function batch = CONN_Setup(names, batch, varargin)
 
 
 % TODO - PROVIDE COMPLETE PARAMETER SPECIFICATION FOR CONN
+%   FIXME - Options: enabled analyses
+%   FIXME - ROIs, Conditions, Covars 1st 2nd, Advanced Options
+
 % TODO : MATCH BIDS SPECIFICATION IN FILE-FINDING DEFAULTS: REGEX, STD DIRS
 % TODO : nscans - typically found from functionals?
 
@@ -274,7 +277,7 @@ end
 
 %% Define 2nd level covariates
 l2type = {'group' 'effect'};
-batch.Setup.subjects.descrip = {};
+batch.Setup.subjects = cell2struct({{} {}}, strcat(l2type, '_descrip'), 2);
 for l2t = l2type
     l2file = Arg.([l2t{:} 's_file']);
     l2desc = [l2t{:} '_descrip'];
