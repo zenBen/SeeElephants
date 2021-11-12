@@ -2,7 +2,7 @@
 % conndir = '/media/bcowley/CBRU_NMM/TBI/CONN/';
 conndir = '/home/local/bcowley/Benslab/METHODMAN/project_BN_CONN/';
 cd(conndir)
-connprj = 'TBI_testi_1';
+connprj = 'Test_Friday';
 datadir = 'testdata';
 
 % Find data and SPM preprocess - THIS IS JUST AN EXAMPLE
