@@ -38,3 +38,4 @@ I would like to learn practical methods for working in source space in M/EEG, us
 
 [blindslide]: http://slideplayer.com/6998251/24/images/2/Brain+Myth+is+Like+Blind+Men+and+an+Elephant.jpg "Blind Men and an elephant"
 
+## This is a new commit from my personal branch. Just testing if I can push things nicely from the source control integration in Matlab. 
