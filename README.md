@@ -37,3 +37,5 @@ I would like to learn practical methods for working in source space in M/EEG, us
 1. [Jabr, Ferris. 2012. The Connectome Debate: Is Mapping the Mind of a Worm Worth It? Scientific American Mind, October 2, 2012](https://www.scientificamerican.com/article/c-elegans-connectome/#)
 
 [blindslide]: http://slideplayer.com/6998251/24/images/2/Brain+Myth+is+Like+Blind+Men+and+an+Elephant.jpg "Blind Men and an elephant"
+
+## Noe: testpush
